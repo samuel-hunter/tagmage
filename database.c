@@ -62,8 +62,8 @@ static void iter_images(sqlite3_stmt *stmt, image_callback callback)
     Image image;
     while ((rc = ASSERT_SQL(sqlite3_step(stmt))) == SQLITE_ROW) {
         image.id = sqlite3_column_int(stmt, 0);
-        newstr((char**) &image.title, (char*) sqlite3_column_text(stmt, 1));
-        newstr((char**) &image.ext, (char*) sqlite3_column_text(stmt, 2));
+        strncpy((char*) &image.title, (char*) sqlite3_column_text(stmt, 1), UTF8_MAX);
+        strncpy((char*) &image.ext, (char*) sqlite3_column_text(stmt, 2), UTF8_MAX);
 
         // Exit early if the callback returns a nonzero status.
         if (callback(&image)) break;
@@ -81,7 +81,7 @@ static void iter_tags(sqlite3_stmt *stmt, tag_callback callback)
     while ((rc = ASSERT_SQL(sqlite3_step(stmt))) == SQLITE_ROW) {
         tag.id = sqlite3_column_int(stmt, 0);
         tag.category = sqlite3_column_int(stmt, 2);
-        newstr((char**) &tag.name, (char*) sqlite3_column_text(stmt, 1));
+        strncpy((char*) &tag.name, (char*) sqlite3_column_text(stmt, 1), UTF8_MAX);
 
         // Exit early if the callback returns a nonzero status.
         if (callback(&tag)) break;
