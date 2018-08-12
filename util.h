@@ -3,8 +3,9 @@
 
 #include <stdlib.h>
 
-void die(int status, const char *format, ...);
+#define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 
+void die(int status, const char *format, ...);
 
 // Allocation methods
 
