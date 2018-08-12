@@ -31,10 +31,9 @@ static void print_usage(int status)
             "  -f PATH  - Use the database at PATH over the default\n"
             "\n"
             " Commands:\n"
-            "  images   - List all images\n"
-            "  image ID - Get details of the image with id ID\n"
-            "  tag ID   - Get details of the tag with id ID\n"
-            "  new-image PATH [ -t TAG1,TAG2,... ]\n",
+            "  images   - List all images in id:ext:title format\n"
+            "  path [ IMAGE ] - List the path of the database. If\n"
+            "                   IMAGE is provided, list that path.\n",
             prog_name);
     exit(status);
 }
@@ -80,7 +79,7 @@ int main(int argc, char **argv)
         }
     }
 
-    // Create db_path variable if it's not set up already
+    // Create path to database if it's not set up already
     mkpath(db_path, 0700);
 
     // Set up backend database
@@ -96,7 +95,27 @@ int main(int argc, char **argv)
     } else if (ARGEQ(i, "images")) {
         tagmage_get_images(&print_image);
     } else if (ARGEQ(i, "path")) {
-        printf("%s\n", db_path);
+        if (++i == argc) {
+            // print Database path if no image id provided
+            printf("%s\n", db_path);
+        } else {
+            int item_id;
+            Image img;
+            char path[PATH_MAX + 1];
+            char buf[PATH_MAX + 1];
+            if (sscanf(argv[i], "%i", &item_id) < 0)
+                die(1, "Invalid number '%s'\n", argv[i]);
+
+            if (tagmage_get_image(item_id, &img) != 0) {
+                die(1, "Image %i doesn't exist.\n", item_id);
+            }
+            snprintf(buf, PATH_MAX, "/%i.", img.id);
+
+            strncpy(path, db_path, PATH_MAX);
+            strncat(path, buf, PATH_MAX);
+            strncat(path, (char*) img.ext, PATH_MAX);
+            printf("%s\n", path);
+        }
     } else {
         // Unknown command
         fprintf(stderr, "Unknown command '%s'\n", argv[i]);

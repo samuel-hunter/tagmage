@@ -245,6 +245,30 @@ void tagmage_delete_tag(int tag_id)
 }
 
 
+int tagmage_get_image(int image_id, Image *image)
+{
+    sqlite3_stmt *stmt = NULL;
+    int rc;
+
+    PREPARE(stmt, "SELECT title,ext FROM image WHERE id=:imageid");
+    BIND(int, stmt, ":imageid", image_id);
+
+    rc = ASSERT_SQL(sqlite3_step(stmt));
+    // Image doesn't exist; return error
+    if (rc == SQLITE_DONE)
+        return -1;
+
+    image->id = image_id;
+    strncpy((char*) &image->title,
+            (char*) sqlite3_column_text(stmt, 0), UTF8_MAX);
+    strncpy((char*) &image->ext,
+            (char*) sqlite3_column_text(stmt, 1), UTF8_MAX);
+
+    sqlite3_finalize(stmt);
+
+    return 0;
+}
+
 void tagmage_get_images(image_callback callback)
 {
     sqlite3_stmt *stmt = NULL;
@@ -284,6 +308,26 @@ void tagmage_search_images(int *tag_ids, image_callback callback) {
     die(1, "search_images: Unsupported operation.\n");
 }
 
+
+int tagmage_get_tag(int tag_id, Tag *tag)
+{
+    sqlite3_stmt *stmt = NULL;
+    int rc;
+
+    PREPARE(stmt, "SELECT name, category FROM tag WHERE id=:tagid");
+
+    rc = ASSERT_SQL(sqlite3_step(stmt));
+    // Tag doesn't exist; return error
+    if (rc == SQLITE_DONE)
+        return -1;
+
+    tag->id = tag_id;
+    strncpy((char*) &tag->name, (char*) sqlite3_column_text(stmt, 0),
+            UTF8_MAX);
+    tag->category = sqlite3_column_int(stmt, 1);
+
+    return 0;
+}
 
 void tagmage_get_tags(tag_callback callback)
 {

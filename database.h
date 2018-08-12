@@ -19,11 +19,13 @@ void tagmage_untag_image(int image_id, int tag_id);
 void tagmage_delete_image(int image_id);
 void tagmage_delete_tag(int tag_id);
 
+int tagmage_get_image(int image_id, Image *image);
 void tagmage_get_images(image_callback callback);
 void tagmage_get_untagged_images(image_callback callback);
 void tagmage_get_images_by_tag(int tag_id, image_callback callback);
 void tagmage_search_images(int *tag_ids, image_callback callback);
 
+int tagmage_get_tag(int tag_id, Tag *tag);
 void tagmage_get_tags(tag_callback callback);
 void tagmage_get_tags_by_image(int image_id, tag_callback callback);
 
