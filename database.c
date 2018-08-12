@@ -24,8 +24,7 @@ static const char *db_setup_queries[] =
 
      "CREATE TABLE tag ("
      "  id INTEGER PRIMARY KEY,"
-     "  name VARCHAR(100) UNIQUE NOT NULL,"
-     "  category INTEGER NOT NULL );",
+     "  name VARCHAR(100) UNIQUE NOT NULL );",
 
      "CREATE TABLE image_tag ("
      "  image INTEGER NOT NULL,"
@@ -80,7 +79,6 @@ static void iter_tags(sqlite3_stmt *stmt, tag_callback callback)
 
     while ((rc = ASSERT_SQL(sqlite3_step(stmt))) == SQLITE_ROW) {
         tag.id = sqlite3_column_int(stmt, 0);
-        tag.category = sqlite3_column_int(stmt, 2);
         strncpy((char*) &tag.name, (char*) sqlite3_column_text(stmt, 1), UTF8_MAX);
 
         // Exit early if the callback returns a nonzero status.
@@ -153,24 +151,6 @@ int tagmage_new_image(const char *title, const char *ext)
     return sqlite3_last_insert_rowid(db);
 }
 
-int tagmage_new_tag(const char *name, category category)
-{
-    sqlite3_stmt *stmt;
-    int rc = 0;
-
-    PREPARE(stmt, "INSERT INTO tag (name, category) VALUES (:name, :category)");
-    BIND_TEXT(stmt, ":name", name);
-    BIND(int, stmt, ":category", category);
-
-    rc = ASSERT_SQL(sqlite3_step(stmt));
-    sqlite3_finalize(stmt);
-    if (rc != SQLITE_DONE)
-        die(1, "new_tag: unexpected SQLite status code %i\n", rc);
-
-    return sqlite3_last_insert_rowid(db);
-}
-
-
 void tagmage_edit_title(int image_id, char *title)
 {
     sqlite3_stmt *stmt = NULL;
@@ -188,34 +168,28 @@ void tagmage_edit_title(int image_id, char *title)
 }
 
 
-void tagmage_tag_image(int image_id, int tag_id)
+void tagmage_add_tag(int image_id, char *tag_name)
 {
     sqlite3_stmt *stmt;
-    PREPARE(stmt,
-            "INSERT INTO image_tag (image, tag) VALUES (:img, :tag)");
 
-    ASSERT_SQL(sqlite3_bind_int(stmt, 1, image_id));
-    ASSERT_SQL(sqlite3_bind_int(stmt, 2, tag_id));
+    // Add tag if it doesn't exist
+    PREPARE(stmt, "INSERT OR IGNORE INTO tag (name) VALUES (:tag)");
+    BIND_TEXT(stmt, ":tag", tag_name);
+    ASSERT_SQL(sqlite3_step(stmt));
+    sqlite3_finalize(stmt);
+    stmt = NULL;
+
+    PREPARE(stmt,
+            "INSERT INTO image_tag (image, tag) VALUES (:img, "
+            "  (SELECT id FROM tag WHERE name=:tag))");
+
+    BIND(int, stmt, ":img", image_id);
+    BIND_TEXT(stmt, ":tag", tag_name);
 
     int rc = ASSERT_SQL(sqlite3_step(stmt));
     sqlite3_finalize(stmt);
     if (rc != SQLITE_DONE)
-        die(1, "link_tag: Unexpected SQLite status code %i\n", rc);
-}
-
-void tagmage_untag_image(int image_id, int tag_id)
-{
-    sqlite3_stmt *stmt;
-    PREPARE(stmt,
-            "DELETE FROM image_tag WHERE image=:image AND tag=:tag");
-    BIND(int, stmt, ":image", image_id);
-    BIND(int, stmt, ":tag", tag_id);
-
-    int rc = ASSERT_SQL(sqlite3_step(stmt));
-    sqlite3_finalize(stmt);
-    if (rc != SQLITE_DONE) {
-        die(1, "unlink_tag: Unexpected SQLite status code %i\n", rc);
-    }
+        die(1, "add_tag: Unexpected SQLite status code %i\n", rc);
 }
 
 void tagmage_delete_image(int image_id)
@@ -314,7 +288,7 @@ int tagmage_get_tag(int tag_id, Tag *tag)
     sqlite3_stmt *stmt = NULL;
     int rc;
 
-    PREPARE(stmt, "SELECT name, category FROM tag WHERE id=:tagid");
+    PREPARE(stmt, "SELECT name FROM tag WHERE id=:tagid");
 
     rc = ASSERT_SQL(sqlite3_step(stmt));
     // Tag doesn't exist; return error
@@ -324,7 +298,6 @@ int tagmage_get_tag(int tag_id, Tag *tag)
     tag->id = tag_id;
     strncpy((char*) &tag->name, (char*) sqlite3_column_text(stmt, 0),
             UTF8_MAX);
-    tag->category = sqlite3_column_int(stmt, 1);
 
     return 0;
 }
@@ -332,7 +305,7 @@ int tagmage_get_tag(int tag_id, Tag *tag)
 void tagmage_get_tags(tag_callback callback)
 {
     sqlite3_stmt *stmt = NULL;
-    PREPARE(stmt, "SELECT id, name, category FROM tag");
+    PREPARE(stmt, "SELECT id, name FROM tag");
 
     iter_tags(stmt, callback);
     sqlite3_finalize(stmt);
@@ -342,7 +315,7 @@ void tagmage_get_tags_by_image(int image_id, tag_callback callback)
 {
     sqlite3_stmt *stmt = NULL;
     PREPARE(stmt,
-            "SELECT id, name, category FROM tag"
+            "SELECT id, name FROM tag"
             " WHERE id IN (SELECT tag FROM image_tag"
             "                WHERE image = :imageid)");
     BIND(int, stmt, ":imageid", image_id);

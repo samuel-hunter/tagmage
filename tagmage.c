@@ -12,6 +12,10 @@
 
 #define ARGEQ(I, STR) !strcmp(argv[I], STR)
 
+#define ERR_UNKNOWN_FLAG "Unknown flag '%s'."
+#define ERR_UNKNOWN_SUBCMD "Unknown command '%s'."
+#define TAG_MAX 1024
+
 
 static char db_path[PATH_MAX+1] = {0};
 static char prog_name[NAME_MAX+1] = {0};
@@ -34,7 +38,7 @@ static void print_usage(int status)
             "  images   - List all images in id:ext:title format\n"
             "  path [ IMAGE ... ] - List the path of the database.\n"
             "                 If IMAGE is provided, list that path.\n"
-            "  add IMAGE - Add an image to the database\n",
+            "  add IMAGE - Add an image to the database\n\n",
             prog_name);
     exit(status);
 }
@@ -72,47 +76,89 @@ static void print_path(int argc, char **argv)
 
 static void add_image(int argc, char **argv)
 {
-    char *path, *basename, *ext;
-    char image_dest[NAME_MAX + 1];
-    int image_id;
+    char *path = NULL, *basename = NULL, *ext = NULL;
+    char image_dest[NAME_MAX + 1] = {'\0'};
+    int image_id = 0, i = 0;
+    char *tags[TAG_MAX] = {NULL};
+    size_t num_tags = 0;
 
-    if (argc == 0)
-        die(1, "Missing file operand.\n");
+    for (i = 0; i < argc; i++) {
+        // [ -t TAG1,TAG2,.. ] - optional list of comma separated tags
+        if (ARGEQ(i, "-t")) {
+            char *seltok;
 
-    ext = basename = path = argv[0];
+            // Get the comma-separated tag list and start tokenizing.
+            INCARG(i);
+            seltok = strtok(argv[i], ",");
 
-    // Search for the basename.
-    for (size_t i = 0; i < strlen(path); i++)
-        if (path[i] == '/') ext = basename = path + i + 1;
-
-    // Search for the file's extension.
-    for (size_t i = 0; i < strlen(basename); i++)
-        if (basename[i] == '.') ext = basename + i + 1;
-
-    if (ext == basename) {
-        // If the extension still points to the basename, then there
-        // is no extension.
-        ext = NULL;
-    } else {
-        // Split the basename from the extension.
-        ext[-1] = 0;
+            // Go through the comma-separated taglist and add tags to
+            // the taglist for later.
+            while (seltok != NULL) {
+                tags[num_tags] = seltok;
+                if (++num_tags == TAG_MAX)
+                    die(1, "Too many tags!");
+                seltok = strtok(NULL, ",");
+            }
+        } else if (ARGEQ(i, "--")) {
+            // Everything after this is the images
+            i++;
+            break;
+        } else if (argv[i][0] == '-') {
+            // Unknown flag
+            fprintf(stderr, ERR_UNKNOWN_FLAG, argv[i]);
+            print_usage(1);
+        } else {
+            // Images start at this point in the argument list.
+            break;
+        }
     }
 
-    image_id = tagmage_new_image(basename, ext);
-    if (image_id < 0)
-        die(1, "Unexpected image id %i\n", image_id);
+    // Images expected here
+    if (i >= argc)
+        die(1, "Missing file operand after '%s'.\n", argv[i-1]);
 
-    // Rejoin the basename to the extension
-    if (ext) ext[-1] = '.';
+    // Iterate through each image
+    for (; i < argc; i++) {
+        ext = basename = path = argv[i];
 
-    snprintf(image_dest, NAME_MAX, "%s/%i.%s", db_path, image_id, ext);
-    if (cp(image_dest, path) != 0) {
-        // Operation failed; remove image data from database.
-        tagmage_delete_image(image_id);
-        die(1, "Unexpected I/O error\n");
+        // Search for the basename.
+        for (size_t i = 0; i < strlen(path); i++)
+            if (path[i] == '/') ext = basename = path + i + 1;
+
+        // Search for the file's extension.
+        for (size_t i = 0; i < strlen(basename); i++)
+            if (basename[i] == '.') ext = basename + i + 1;
+
+        if (ext == basename) {
+            // If the extension still points to the basename, then there
+            // is no extension.
+            ext = NULL;
+        } else {
+            // Split the basename from the extension.
+            ext[-1] = 0;
+        }
+
+        image_id = tagmage_new_image(basename, ext);
+        if (image_id < 0)
+            die(1, "Unknown image id %i\n", image_id);
+
+        // Rejoin the basename to the extension
+        if (ext) ext[-1] = '.';
+
+        snprintf(image_dest, NAME_MAX, "%s/%i.%s", db_path, image_id, ext);
+        if (cp(image_dest, path) != 0) {
+            // Operation failed; remove image data from database.
+            tagmage_delete_image(image_id);
+            die(1, "Unexpected I/O error\n");
+        }
+
+        printf("%i\n", image_id);
+
+        // Add each tag to the image
+        for(size_t ti = 0; ti < num_tags; ti++) {
+            tagmage_add_tag(image_id, tags[ti]);
+        }
     }
-
-    printf("%i\n", image_id);
 }
 
 int main(int argc, char **argv)
