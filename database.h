@@ -7,7 +7,7 @@
 typedef int (*image_callback)(const Image*);
 typedef int (*tag_callback)(const Tag*);
 
-void tagmage_err(int status);
+void tagmage_warn();
 
 int tagmage_setup(const char *db_path);
 int tagmage_cleanup();

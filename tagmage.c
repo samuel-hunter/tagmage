@@ -2,7 +2,6 @@
 #include <errno.h>
 #include <limits.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include "core.h"
@@ -15,14 +14,17 @@
 #define APP_NAME "tagmage"
 #define TAG_MAX 1024
 
+#define TAGMAGE_ASSERT(EXPR) if ((EXPR) < 0) { \
+    tagmage_warn(); \
+    return 1; \
+    } do {} while (0)
+
 
 static char db_path[PATH_MAX+1] = {0};
 
 
-static void print_usage(int status)
+static void print_usage(FILE *f)
 {
-    // Print to stderr on error; stdout otherwise
-    FILE *f = status ? stderr : stdout;
 
     fprintf(f,
             "Usage: tagmage [ -f PATH ] COMMAND [ ... ]\n"
@@ -35,7 +37,6 @@ static void print_usage(int status)
             "                 If IMAGE is provided, list that path.\n"
             "  add -t [ TAG1,TAG2,... ] IMAGE - Add an image to the\n"
             "                 database\n\n");
-    exit(status);
 }
 
 static int print_image(const Image *image)
@@ -44,24 +45,23 @@ static int print_image(const Image *image)
     return 0;
 }
 
-static void list_images(int argc, char **argv)
+static int list_images(int argc, char **argv)
 {
     if (argc == 1) {
-        if (tagmage_get_images(print_image) < 0)
-            tagmage_err(1);
-        else
-            return;
+        TAGMAGE_ASSERT(tagmage_get_images(print_image));
+        return 0;
     }
 
     for (int i = 1; i < argc; i++) {
-        if (tagmage_get_images_by_tag(argv[i], print_image) < 0)
-            tagmage_err(1);
-
+        TAGMAGE_ASSERT(tagmage_get_images_by_tag(argv[i],
+                                                 print_image));
         printf("\n");
     }
+
+    return 0;
 }
 
-static void print_path(int argc, char **argv)
+static int print_path(int argc, char **argv)
 {
     Image img;
     int item_id;
@@ -69,7 +69,7 @@ static void print_path(int argc, char **argv)
     if (argc == 1) {
         // print Database path if no image id provided
         printf("%s\n", db_path);
-        return;
+        return 0;
     }
 
     // Each subsequent argument is an image id
@@ -77,14 +77,15 @@ static void print_path(int argc, char **argv)
         if (sscanf(argv[i], "%i", &item_id) < 0)
             errx(1, "Invalid number '%s'", argv[i]);
 
-        if (tagmage_get_image(item_id, &img) < 0)
-            tagmage_err(1);
+        TAGMAGE_ASSERT(tagmage_get_image(item_id, &img));
 
         printf("%s/%i.%s\n", db_path, img.id, img.ext);
     }
+
+    return 0;
 }
 
-static void add_image(int argc, char **argv)
+static int add_image(int argc, char **argv)
 {
     char *path = NULL, *basename = NULL, *ext = NULL;
     char *seltok;
@@ -108,15 +109,16 @@ static void add_image(int argc, char **argv)
             }
             break;
         case '?':
-            print_usage(1);
-            break;
+            print_usage(stderr);
+            return 1;
         }
     }
 
     // Images expected here
     if (optind >= argc) {
         fprintf(stderr, "Missing file operand.");
-        print_usage(1);
+        print_usage(stderr);
+        return 1;
     }
 
     // Iterate through each image
@@ -140,9 +142,7 @@ static void add_image(int argc, char **argv)
             ext[-1] = 0;
         }
 
-        image_id = tagmage_new_image(basename, ext);
-        if (image_id < 0)
-            tagmage_err(1);
+        TAGMAGE_ASSERT(image_id = tagmage_new_image(basename, ext));
 
         // Rejoin the basename to the extension
         if (ext) ext[-1] = '.';
@@ -152,12 +152,13 @@ static void add_image(int argc, char **argv)
         // Copy file and handle file errors.
         switch (cp(image_dest, path)) {
         case -1:
-            if (tagmage_delete_image(image_id) < 0)
-                tagmage_err(1);
+            // Attempt to delete image; don't error-check, since we're
+            // already failing.
+            tagmage_delete_image(image_id);
             err(1, "%s", image_dest);
         case -2:
-            if (tagmage_delete_image(image_id) < 0)
-                tagmage_err(1);
+            // Don't error-check, since we're already failing.
+            tagmage_delete_image(image_id);
             err(1, "%s", path);
         }
 
@@ -165,13 +166,14 @@ static void add_image(int argc, char **argv)
 
         // Add each tag to the image
         for(size_t ti = 0; ti < num_tags; ti++) {
-            if (tagmage_add_tag(image_id, tags[ti]) < 0)
-                tagmage_err(1);
+            TAGMAGE_ASSERT(tagmage_add_tag(image_id, tags[ti]));
         }
     }
+
+    return 0;
 }
 
-static void rm_image(int argc, char **argv)
+static int rm_image(int argc, char **argv)
 {
     int id = 0;
     Image img;
@@ -179,15 +181,15 @@ static void rm_image(int argc, char **argv)
 
     if (argc == 1) {
         fprintf(stderr, "Missing file operand.\n");
-        print_usage(1);
+        print_usage(stderr);
+        return 1;
     }
 
     for (int i = 1; i < argc; i++) {
         if (sscanf(argv[i], "%i", &id) != 1)
             errx(1, "Unknown number '%s'.", argv[i]);
 
-        if (tagmage_get_image(id, &img) < 0)
-            tagmage_err(1);
+        TAGMAGE_ASSERT(tagmage_get_image(id, &img));
 
         snprintf(path, PATH_MAX, "%s/%i.%s", db_path, id, img.ext);
         int status = remove(path);
@@ -201,20 +203,21 @@ static void rm_image(int argc, char **argv)
             fprintf(stderr, "Removing reference anyway...\n");
         }
 
-        if (tagmage_delete_image(id) < 0) {
-            tagmage_err(1);
-        }
+        TAGMAGE_ASSERT(tagmage_delete_image(id));
     }
+
+    return 0;
 }
 
-static void edit_image(int argc, char **argv)
+static int edit_image(int argc, char **argv)
 {
     int id = 0;
     char *newtitle = NULL;
 
     if (argc < 3) {
         fprintf(stderr, "Not enough arguments.\n");
-        print_usage(1);
+        print_usage(stderr);
+        return 1;
     }
 
     if (sscanf(argv[1], "%i", &id) != 1)
@@ -222,13 +225,14 @@ static void edit_image(int argc, char **argv)
 
     newtitle = argv[2];
 
-    if (tagmage_edit_title(id, newtitle) < 0)
-        tagmage_err(1);
+    TAGMAGE_ASSERT(tagmage_edit_title(id, newtitle));
+
+    return 0;
 }
 
 int main(int argc, char **argv)
 {
-    int opt;
+    int opt, status = 0;
 
     while (opt = getopt(argc, argv, "hf:"), opt != -1) {
         switch (opt) {
@@ -242,7 +246,8 @@ int main(int argc, char **argv)
             break;
         case '?':
             // Error
-            print_usage(1);
+            print_usage(stderr);
+            return 1;
             break;
         }
     }
@@ -269,8 +274,7 @@ int main(int argc, char **argv)
     strncpy(db_file, db_path, PATH_MAX);
     strncat(db_file, "/db.sqlite", PATH_MAX);
 
-    if (tagmage_setup(db_file) < 0)
-        tagmage_err(1);
+    TAGMAGE_ASSERT(tagmage_setup(db_file));
 
     // Shift argc, argv to subcommands
     argc -= optind;
@@ -281,26 +285,26 @@ int main(int argc, char **argv)
     // Sub-Commands
     if (argc == 0 || STREQ(argv[0], "help")) {
         // Default command; also runs if no other arguments exist
-        print_usage(0);
+        print_usage(stdout);
     } else if (STREQ(argv[0], "list")) {
-        list_images(argc, argv);
+        status = list_images(argc, argv);
     } else if (STREQ(argv[0], "path")) {
         // Give arguments to print_path for everythign past "path"
-        print_path(argc, argv);
+        status = print_path(argc, argv);
     } else if (STREQ(argv[0], "add")) {
         // Give arguments to add_image for everything past "add".
-        add_image(argc, argv);
+        status = add_image(argc, argv);
     } else if (STREQ(argv[0], "rm")) {
-        rm_image(argc, argv);
+        status = rm_image(argc, argv);
     } else if (STREQ(argv[0], "edit")) {
-        edit_image(argc, argv);
+        status = edit_image(argc, argv);
     } else {
         // Unknown command
         fprintf(stderr, "Unknown command '%s'\n", argv[0]);
-        print_usage(1);
+        print_usage(stderr);
+        status = 1;
     }
 
-    if (tagmage_cleanup() < 0)
-        tagmage_err(1);
-    return 0;
+    TAGMAGE_ASSERT(tagmage_cleanup());
+    return status;
 }

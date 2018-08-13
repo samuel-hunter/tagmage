@@ -2,7 +2,6 @@
 #include <sqlite3.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "database.h"
 #include "util.h"
@@ -98,9 +97,9 @@ static int iter_tags(sqlite3_stmt *stmt, tag_callback callback)
 }
 
 
-void tagmage_err(int status)
+void tagmage_warn()
 {
-    errx(status, "%s", tagmage_err_buf);
+    warnx("%s", tagmage_err_buf);
 }
 
 int tagmage_setup(const char *db_path)
