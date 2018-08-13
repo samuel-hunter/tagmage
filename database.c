@@ -7,15 +7,21 @@
 #include "database.h"
 #include "util.h"
 
-#define ASSERT_SQL(EXPR) assert_sql(db, EXPR, __FILE__, __LINE__)
+#define CHECK_STATUS(RC) if (RC != SQLITE_OK && RC != SQLITE_DONE) { \
+    seterr(); \
+    return -1; \
+    } do {} while(0)
+// add "do {} while(0)" at end for semicolons
 
-#define PREPARE(STMT, QUERY) ASSERT_SQL(sqlite3_prepare_v2(db, QUERY, -1, &(STMT), NULL))
+#define PREPARE(STMT, QUERY) sqlite3_prepare_v2(db, QUERY, -1, &(STMT), NULL)
 #define BIND(TYPE, STMT, NAME, VAL) \
-    ASSERT_SQL(sqlite3_bind_##TYPE (STMT,                            \
-                                    sqlite3_bind_parameter_index(STMT, NAME), VAL))
+    sqlite3_bind_##TYPE (STMT,                            \
+                         sqlite3_bind_parameter_index(STMT, NAME), VAL)
 #define BIND_TEXT(STMT, NAME, VAL) \
-    ASSERT_SQL(sqlite3_bind_text(STMT,                               \
-                                 sqlite3_bind_parameter_index(STMT, NAME), VAL, -1, NULL))
+    sqlite3_bind_text(STMT,                               \
+                      sqlite3_bind_parameter_index(STMT, NAME), VAL, -1, NULL)
+
+#define BUFFER_MAX 4096
 
 static const char *db_setup_queries[] =
     {"CREATE TABLE image ("
@@ -37,30 +43,19 @@ static const char *db_setup_queries[] =
      0};
 
 static sqlite3 *db = NULL;
+static char tagmage_err_buf[BUFFER_MAX + 1] = {0};
 
-static int assert_sql(sqlite3 *db, int status, const char *filename, int linenum)
+static void seterr()
 {
-    switch (status) {
-    case SQLITE_OK:
-    case SQLITE_ROW:
-    case SQLITE_DONE:
-        break;
-    case SQLITE_WARNING:
-        fprintf(stderr, "%s:%i: SQL Warning! (%i)\n", filename, linenum, status);
-        break;
-    default:
-        errx(SQLITE_ERROR, "%s:%i: SQL Error! (%i)\n%s", filename, linenum, status,
-            sqlite3_errmsg(db));
-    }
-
-    return status;
+    snprintf(tagmage_err_buf, BUFFER_MAX,
+               "(%i) %s", sqlite3_errcode(db), sqlite3_errmsg(db));
 }
 
-static void iter_images(sqlite3_stmt *stmt, image_callback callback)
+static int iter_images(sqlite3_stmt *stmt, image_callback callback)
 {
     int rc;
     Image image;
-    while ((rc = ASSERT_SQL(sqlite3_step(stmt))) == SQLITE_ROW) {
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
         image.id = sqlite3_column_int(stmt, 0);
         strncpy((char*) &image.title, (char*) sqlite3_column_text(stmt, 1), UTF8_MAX);
         strncpy((char*) &image.ext, (char*) sqlite3_column_text(stmt, 2), UTF8_MAX);
@@ -69,16 +64,20 @@ static void iter_images(sqlite3_stmt *stmt, image_callback callback)
         if (callback(&image)) break;
     }
 
-    if (rc != SQLITE_DONE)
-        errx(rc, "Unexpected SQLite status: %i", rc);
+    if (rc != SQLITE_DONE) {
+        seterr();
+        return -1;
+    }
+
+    return 0;
 }
 
-static void iter_tags(sqlite3_stmt *stmt, tag_callback callback)
+static int iter_tags(sqlite3_stmt *stmt, tag_callback callback)
 {
     int rc;
     Tag tag;
 
-    while ((rc = ASSERT_SQL(sqlite3_step(stmt))) == SQLITE_ROW) {
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
         tag.id = sqlite3_column_int(stmt, 0);
         strncpy((char*) &tag.name, (char*) sqlite3_column_text(stmt, 1), UTF8_MAX);
 
@@ -86,52 +85,74 @@ static void iter_tags(sqlite3_stmt *stmt, tag_callback callback)
         if (callback(&tag)) break;
     }
 
-    if (rc != SQLITE_DONE)
-        errx(rc, "Unexpected SQLite status %i", rc);
+    if (rc != SQLITE_DONE) {
+        seterr();
+        return -1;
+    }
+
+    return 0;
 }
 
 
-void tagmage_setup(const char *db_path)
+void tagmage_err(int status)
+{
+    errx(status, "%s", tagmage_err_buf);
+}
+
+int tagmage_setup(const char *db_path)
 {
     sqlite3_stmt *stmt = NULL;
     int rc = 0;
     int count = 0;
-    char *errmsg = NULL;
 
     // Use builtin memory by default
     if (db_path == NULL)
         db_path = ":memory:";
 
-    if (db) tagmage_cleanup();
+    if (db) {
+        if (tagmage_cleanup() < 0)
+            return -1;
+    }
 
     rc = sqlite3_open(db_path, &db);
-    if (rc != SQLITE_OK) {
-        errx(rc, "Can't open database: %s",
-            sqlite3_errmsg(db));
-    }
+    CHECK_STATUS(rc);
 
     // double-check if the table is set up
     PREPARE(stmt, "SELECT COUNT(*) FROM sqlite_master WHERE type='table'"
             "AND name IN ('image', 'tag', 'image_tag')");
-    rc = ASSERT_SQL(sqlite3_step(stmt));
+    rc = sqlite3_step(stmt);
     count = sqlite3_column_int(stmt, 0);
 
     if (count != 3) {
         // Set up the new database
         for (int i = 0; db_setup_queries[i] != 0; i++) {
-            ASSERT_SQL(sqlite3_exec(db, db_setup_queries[i], NULL, NULL, NULL));
+            rc = sqlite3_exec(db, db_setup_queries[i], NULL,
+                              NULL, NULL);
+            CHECK_STATUS(rc);
         }
     }
 
     // Set up pragmas
-    ASSERT_SQL(sqlite3_exec(db, "PRAGMA foreign_keys=TRUE", NULL, NULL, &errmsg));
-    ASSERT_SQL(sqlite3_exec(db, "PRAGMA encoding='UTF-8'",  NULL, NULL, &errmsg));
+    rc = sqlite3_exec(db, "PRAGMA foreign_keys=TRUE",
+                      NULL, NULL, NULL);
+    CHECK_STATUS(rc);
+
+    rc = sqlite3_exec(db, "PRAGMA encoding='UTF-8'",
+                      NULL, NULL, NULL);
+    CHECK_STATUS(rc);
+
+    return 0;
 }
 
-void tagmage_cleanup()
+int tagmage_cleanup()
 {
-    sqlite3_close(db);
-    db = NULL;
+    int rc = sqlite3_close(db);
+    CHECK_STATUS(rc);
+
+    if (rc == SQLITE_OK)
+        db = NULL;
+
+    return 0;
 }
 
 
@@ -144,15 +165,15 @@ int tagmage_new_image(const char *title, const char *ext)
     BIND_TEXT(stmt, ":title", title);
     BIND_TEXT(stmt, ":ext", ext);
 
-    rc = ASSERT_SQL(sqlite3_step(stmt));
+    rc = sqlite3_step(stmt);
+    CHECK_STATUS(rc);
+
     sqlite3_finalize(stmt);
-    if (rc != SQLITE_DONE)
-        errx(1, "new_image: Unexpected SQLite status code %i", rc);
 
     return sqlite3_last_insert_rowid(db);
 }
 
-void tagmage_edit_title(int image_id, char *title)
+int tagmage_edit_title(int image_id, char *title)
 {
     sqlite3_stmt *stmt = NULL;
     PREPARE(stmt,
@@ -161,22 +182,24 @@ void tagmage_edit_title(int image_id, char *title)
     BIND_TEXT(stmt, ":newtitle", title);
     BIND(int, stmt, ":imageid", image_id);
 
-    int rc = ASSERT_SQL(sqlite3_step(stmt));
+    int rc = sqlite3_step(stmt);
+    CHECK_STATUS(rc);
     sqlite3_finalize(stmt);
 
-    if (rc != SQLITE_DONE)
-        errx(1, "edit_image: Unexpected SQLite status code %i", rc);
+    return 0;
 }
 
 
-void tagmage_add_tag(int image_id, char *tag_name)
+int tagmage_add_tag(int image_id, char *tag_name)
 {
     sqlite3_stmt *stmt;
+    int rc;
 
     // Add tag if it doesn't exist
     PREPARE(stmt, "INSERT OR IGNORE INTO tag (name) VALUES (:tag)");
     BIND_TEXT(stmt, ":tag", tag_name);
-    ASSERT_SQL(sqlite3_step(stmt));
+    rc = sqlite3_step(stmt);
+    CHECK_STATUS(rc);
     sqlite3_finalize(stmt);
     stmt = NULL;
 
@@ -187,23 +210,26 @@ void tagmage_add_tag(int image_id, char *tag_name)
     BIND(int, stmt, ":img", image_id);
     BIND_TEXT(stmt, ":tag", tag_name);
 
-    int rc = ASSERT_SQL(sqlite3_step(stmt));
+    rc = sqlite3_step(stmt);
+    CHECK_STATUS(rc);
     sqlite3_finalize(stmt);
-    if (rc != SQLITE_DONE)
-        errx(1, "add_tag: Unexpected SQLite status code %i", rc);
+
+    return 0;
 }
 
-void tagmage_delete_image(int image_id)
+int tagmage_delete_image(int image_id)
 {
     sqlite3_stmt *stmt = NULL;
+    int rc;
+
     PREPARE(stmt, "DELETE FROM image WHERE id=:imageid");
     BIND(int, stmt, ":imageid", image_id);
 
-    int rc = ASSERT_SQL(sqlite3_step(stmt));
+    rc = sqlite3_step(stmt);
+    CHECK_STATUS(rc);
     sqlite3_finalize(stmt);
 
-    if (rc != SQLITE_DONE)
-        errx(1, "delete_image: Unexpected SQLite status code %i", rc);
+    return 0;
 }
 
 
@@ -215,10 +241,13 @@ int tagmage_get_image(int image_id, Image *image)
     PREPARE(stmt, "SELECT title,ext FROM image WHERE id=:imageid");
     BIND(int, stmt, ":imageid", image_id);
 
-    rc = ASSERT_SQL(sqlite3_step(stmt));
-    // Image doesn't exist; return error
-    if (rc == SQLITE_DONE)
+    rc = sqlite3_step(stmt);
+    CHECK_STATUS(rc);
+
+    if (rc != SQLITE_ROW) {
+        strncpy(tagmage_err_buf, "Image doesn't exist.", BUFFER_MAX);
         return -1;
+    }
 
     image->id = image_id;
     strncpy((char*) &image->title,
@@ -231,30 +260,39 @@ int tagmage_get_image(int image_id, Image *image)
     return 0;
 }
 
-void tagmage_get_images(image_callback callback)
+int tagmage_get_images(image_callback callback)
 {
     sqlite3_stmt *stmt = NULL;
+    int status;
 
     PREPARE(stmt, "SELECT id,title,ext FROM image");
 
-    iter_images(stmt, callback);
+    status = iter_images(stmt, callback);
     sqlite3_finalize(stmt);
+
+    return status;
 }
 
-void tagmage_get_untagged_images(image_callback callback)
+int tagmage_get_untagged_images(image_callback callback)
 {
     sqlite3_stmt *stmt = NULL;
+    int status;
+
     PREPARE(stmt,
             "SELECT id, title, ext,  FROM image "
             "  WHERE id NOT IN (SELECT image FROM image_tag)");
 
-    iter_images(stmt, callback);
+    status = iter_images(stmt, callback);
     sqlite3_finalize(stmt);
+
+    return status;
 }
 
-void tagmage_get_images_by_tag(char *tag, image_callback callback)
+int tagmage_get_images_by_tag(char *tag, image_callback callback)
 {
     sqlite3_stmt *stmt = NULL;
+    int status;
+
     PREPARE(stmt,
             "SELECT id, title, ext FROM image"
             " WHERE id IN (SELECT image FROM image_tag"
@@ -263,12 +301,15 @@ void tagmage_get_images_by_tag(char *tag, image_callback callback)
 
     BIND_TEXT(stmt, ":tag", tag);
 
-    iter_images(stmt, callback);
+    status = iter_images(stmt, callback);
     sqlite3_finalize(stmt);
+
+    return status;
 }
 
-void tagmage_search_images(int *tag_ids, image_callback callback) {
-    errx(1, "search_images: Unsupported operation.");
+int tagmage_search_images(int *tag_ids, image_callback callback) {
+    strncpy(tagmage_err_buf, "Unsupported operation.", BUFFER_MAX);
+    return -1;
 }
 
 
@@ -279,10 +320,13 @@ int tagmage_get_tag(int tag_id, Tag *tag)
 
     PREPARE(stmt, "SELECT name FROM tag WHERE id=:tagid");
 
-    rc = ASSERT_SQL(sqlite3_step(stmt));
-    // Tag doesn't exist; return error
-    if (rc == SQLITE_DONE)
+    rc = sqlite3_step(stmt);
+    CHECK_STATUS(rc);
+
+    if (rc != SQLITE_ROW) {
+        strncpy(tagmage_err_buf, "Tag dosn't exist.", BUFFER_MAX);
         return -1;
+    }
 
     tag->id = tag_id;
     strncpy((char*) &tag->name, (char*) sqlite3_column_text(stmt, 0),
@@ -291,23 +335,32 @@ int tagmage_get_tag(int tag_id, Tag *tag)
     return 0;
 }
 
-void tagmage_get_tags(tag_callback callback)
+int tagmage_get_tags(tag_callback callback)
 {
     sqlite3_stmt *stmt = NULL;
+    int status;
+
     PREPARE(stmt, "SELECT id, name FROM tag");
 
-    iter_tags(stmt, callback);
+    status = iter_tags(stmt, callback);
     sqlite3_finalize(stmt);
+
+    return status;
 }
 
-void tagmage_get_tags_by_image(int image_id, tag_callback callback)
+int tagmage_get_tags_by_image(int image_id, tag_callback callback)
 {
     sqlite3_stmt *stmt = NULL;
+    int status;
+
     PREPARE(stmt,
             "SELECT id, name FROM tag"
             " WHERE id IN (SELECT tag FROM image_tag"
             "                WHERE image = :imageid)");
     BIND(int, stmt, ":imageid", image_id);
-    iter_tags(stmt, callback);
+
+    status = iter_tags(stmt, callback);
     sqlite3_finalize(stmt);
+
+    return status;
 }
