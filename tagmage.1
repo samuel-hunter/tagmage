@@ -1,0 +1,75 @@
+\" TODO replace empty quotes with program version.
+.TH "TAGMAGE" "1" "13 Aug 2018" "" "tagmage"
+
+.SH "NAME"
+tagmage - save, organize and list images via tags.
+
+.SH "SYNOPSIS"
+.B hsc-hash
+.RI [ OPTION ]...
+.RI [ COMMAND ]
+...
+
+.SH "DESCRIPTION"
+
+
+.PP
+.B -f
+.I SAVE
+.RS 4
+Sets the save directory to
+.IR SAVE .
+If this option is not present, the save directory will be set to
+.IR $XDG_HOME /tagmage
+if
+.I $XDG_HOME
+exists. If not, it will be set to
+.IR $HOME /.local/share/tagmage "" .
+.RE
+
+.SH "COMMANDS"
+
+.PP
+.B add
+.RI [ "" "-f " TAG1,TAG2,.. ]
+.I IMAGES..
+.RS 4
+Copies
+.I IMAGES
+to the save file and outputs the IDs of each image to standard output,
+delimited by a newline. If any tags are provided, they will be
+assigned to each image added.
+.RE
+
+.PP
+.B edit
+.I IMAGE TITLE
+.RS 4
+Changes
+.IR IMAGE 's
+title to
+.IR TITLE .
+.RE
+
+.PP
+.B list
+.RI [ TAGS.. ]
+.RS 4
+Lists every image in the database. If a list of tags are provided, it
+will go through each tag and list every image that has the tag.
+.RE
+
+.PP
+.B path
+.RI [ IMAGES.. ]
+.RS 4
+Echoes the path of the save directory to standard output. If
+.I IMAGE
+is provided, it lists the path of the image id.
+.RE
+
+.PP
+.B rm
+.I IMAGES..
+.RS 4
+Removes every image listed from the database.

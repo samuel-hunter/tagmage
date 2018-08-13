@@ -29,14 +29,15 @@ static void print_usage(FILE *f)
     fprintf(f,
             "Usage: tagmage [ -f PATH ] COMMAND [ ... ]\n"
             "\n"
-            "  -f PATH  - Use the database at PATH over the default\n"
+            "  -f SAVE\n  - Set custom save directory.\n"
             "\n"
-            " Commands:\n"
-            "  list   - List all images in id:ext:title format\n"
-            "  path [ IMAGE ... ] - List the path of the database.\n"
-            "                 If IMAGE is provided, list that path.\n"
-            "  add -t [ TAG1,TAG2,... ] IMAGE - Add an image to the\n"
-            "                 database\n\n");
+            "  add [-f TAG1,TAG2,...] IMAGES..\n"
+            "  edit IMAGE TITLE\n"
+            "  list [TAGS..]\n"
+            "  path [IMAGES..]\n"
+            "  rm IMAGES..\n"
+            "\n"
+            "Visit `man 1 tagmage` for more details.\n");
 }
 
 static int print_image(const Image *image)

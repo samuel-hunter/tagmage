@@ -1,6 +1,5 @@
-CFLAGS = -Wpedantic -g -O0 `pkg-config --cflags sqlite3`
-LDFLAGS = `pkg-config --libs sqlite3`
-CC = clang
+include config.mk
+
 
 SRC = util.c database.c
 OBJ = $(SRC:.c=.o)
@@ -24,6 +23,12 @@ tagmage: $(OBJ) tagmage.o
 test: $(OBJ) test.o
 	$(CC) $(LDFLAGS) -o $@ $^
 	./test
+
+install: tagmage
+	mkdir -p $(MANDIR)/man1
+	install -m 644 tagmage.1 $(MANDIR)/man1/tagmage.1
+	mkdir -p $(PREFIXDIR)/bin
+	install -m 755 tagmage $(PREFIXDIR)/bin/tagmage
 
 clean:
 	rm -f tagmage test $(OBJ) tagmage.o test.o
