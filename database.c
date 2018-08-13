@@ -264,15 +264,16 @@ void tagmage_get_untagged_images(image_callback callback)
     sqlite3_finalize(stmt);
 }
 
-void tagmage_get_images_by_tag(int tag_id, image_callback callback)
+void tagmage_get_images_by_tag(char *tag, image_callback callback)
 {
     sqlite3_stmt *stmt = NULL;
     PREPARE(stmt,
             "SELECT id, title, ext FROM image"
             " WHERE id IN (SELECT image FROM image_tag"
-            "                WHERE tag = :tagid)");
+            "   WHERE tag = (SELECT id FROM tag"
+            "                 WHERE name=:tag))");
 
-    BIND(int, stmt, ":tagid", tag_id);
+    BIND_TEXT(stmt, ":tag", tag);
 
     iter_images(stmt, callback);
     sqlite3_finalize(stmt);

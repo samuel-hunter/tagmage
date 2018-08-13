@@ -35,18 +35,32 @@ static void print_usage(int status)
             "  -f PATH  - Use the database at PATH over the default\n"
             "\n"
             " Commands:\n"
-            "  images   - List all images in id:ext:title format\n"
+            "  list   - List all images in id:ext:title format\n"
             "  path [ IMAGE ... ] - List the path of the database.\n"
             "                 If IMAGE is provided, list that path.\n"
-            "  add IMAGE - Add an image to the database\n\n",
+            "  add -t [ TAG1,TAG2,... ] IMAGE - Add an image to the\n"
+            "                 database\n\n",
             prog_name);
     exit(status);
 }
 
 static int print_image(const Image *image)
 {
-    printf("%i:%s:%s\n", image->id, image->ext, image->title);
+    printf("%i %s %s\n", image->id, image->ext, image->title);
     return 0;
+}
+
+static void list_images(int argc, char **argv)
+{
+    if (argc == 0) {
+        tagmage_get_images(print_image);
+        return;
+    }
+
+    for (int i = 0; i < argc; i++) {
+        tagmage_get_images_by_tag(argv[i], print_image);
+        printf("\n");
+    }
 }
 
 static void print_path(int argc, char **argv)
@@ -209,8 +223,8 @@ int main(int argc, char **argv)
     if (i == argc || ARGEQ(i, "help")) {
         // Default command; also runs if no other arguments exist
         print_usage(1);
-    } else if (ARGEQ(i, "images")) {
-        tagmage_get_images(&print_image);
+    } else if (ARGEQ(i, "list")) {
+        list_images(argc - i - 1, argv + i + 1);
     } else if (ARGEQ(i, "path")) {
         // Give arguments to print_path for everythign past "path"
         print_path(argc - i - 1, argv + i + 1);
