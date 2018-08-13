@@ -49,7 +49,7 @@ static int assert_sql(sqlite3 *db, int status, const char *filename, int linenum
         fprintf(stderr, "%s:%i: SQL Warning! (%i)\n", filename, linenum, status);
         break;
     default:
-        err(SQLITE_ERROR, "%s:%i: SQL Error! (%i)\n%s\n", filename, linenum, status,
+        errx(SQLITE_ERROR, "%s:%i: SQL Error! (%i)\n%s", filename, linenum, status,
             sqlite3_errmsg(db));
     }
 
@@ -70,7 +70,7 @@ static void iter_images(sqlite3_stmt *stmt, image_callback callback)
     }
 
     if (rc != SQLITE_DONE)
-        err(rc, "Unexpected SQLite status: %i\n", rc);
+        errx(rc, "Unexpected SQLite status: %i", rc);
 }
 
 static void iter_tags(sqlite3_stmt *stmt, tag_callback callback)
@@ -87,7 +87,7 @@ static void iter_tags(sqlite3_stmt *stmt, tag_callback callback)
     }
 
     if (rc != SQLITE_DONE)
-        err(rc, "Unexpected SQLite status %i\n", rc);
+        errx(rc, "Unexpected SQLite status %i", rc);
 }
 
 
@@ -106,7 +106,7 @@ void tagmage_setup(const char *db_path)
 
     rc = sqlite3_open(db_path, &db);
     if (rc != SQLITE_OK) {
-        err(rc, "Can't open database: %s\n",
+        errx(rc, "Can't open database: %s",
             sqlite3_errmsg(db));
     }
 
@@ -147,7 +147,7 @@ int tagmage_new_image(const char *title, const char *ext)
     rc = ASSERT_SQL(sqlite3_step(stmt));
     sqlite3_finalize(stmt);
     if (rc != SQLITE_DONE)
-        err(1, "new_image: Unexpected SQLite status code %i\n", rc);
+        errx(1, "new_image: Unexpected SQLite status code %i", rc);
 
     return sqlite3_last_insert_rowid(db);
 }
@@ -165,7 +165,7 @@ void tagmage_edit_title(int image_id, char *title)
     sqlite3_finalize(stmt);
 
     if (rc != SQLITE_DONE)
-        err(1, "edit_image: Unexpected SQLite status code %i\n", rc);
+        errx(1, "edit_image: Unexpected SQLite status code %i", rc);
 }
 
 
@@ -190,7 +190,7 @@ void tagmage_add_tag(int image_id, char *tag_name)
     int rc = ASSERT_SQL(sqlite3_step(stmt));
     sqlite3_finalize(stmt);
     if (rc != SQLITE_DONE)
-        err(1, "add_tag: Unexpected SQLite status code %i\n", rc);
+        errx(1, "add_tag: Unexpected SQLite status code %i", rc);
 }
 
 void tagmage_delete_image(int image_id)
@@ -203,7 +203,7 @@ void tagmage_delete_image(int image_id)
     sqlite3_finalize(stmt);
 
     if (rc != SQLITE_DONE)
-        err(1, "delete_image: Unexpected SQLite status code %i\n", rc);
+        errx(1, "delete_image: Unexpected SQLite status code %i", rc);
 }
 
 
@@ -268,7 +268,7 @@ void tagmage_get_images_by_tag(char *tag, image_callback callback)
 }
 
 void tagmage_search_images(int *tag_ids, image_callback callback) {
-    err(1, "search_images: Unsupported operation.\n");
+    errx(1, "search_images: Unsupported operation.");
 }
 
 

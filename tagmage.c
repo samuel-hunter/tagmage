@@ -71,10 +71,10 @@ static void print_path(int argc, char **argv)
     // Each subsequent argument is an image id
     for (int i = 1; i < argc; i++) {
         if (sscanf(argv[i], "%i", &item_id) < 0)
-            err(1, "Invalid number '%s'\n", argv[i]);
+            errx(1, "Invalid number '%s'", argv[i]);
 
         if (tagmage_get_image(item_id, &img) != 0)
-            err(1, "Image %i doesn't exist.\n", item_id);
+            errx(1, "Image %i doesn't exist.", item_id);
 
         printf("%s/%i.%s\n", db_path, img.id, img.ext);
     }
@@ -101,7 +101,7 @@ static void add_image(int argc, char **argv)
             while (seltok != NULL) {
                 tags[num_tags] = seltok;
                 if (++num_tags == TAG_MAX)
-                    err(1, "Too many tags!");
+                    errx(1, "Too many tags.");
                 seltok = strtok(NULL, ",");
             }
             break;
@@ -113,7 +113,7 @@ static void add_image(int argc, char **argv)
 
     // Images expected here
     if (optind >= argc) {
-        fprintf(stderr, "Missing file operand.\n");
+        fprintf(stderr, "Missing file operand.");
         print_usage(1);
     }
 
@@ -140,7 +140,7 @@ static void add_image(int argc, char **argv)
 
         image_id = tagmage_new_image(basename, ext);
         if (image_id < 0)
-            err(1, "Unknown image id %i\n", image_id);
+            errx(1, "Unknown image id %i", image_id);
 
         // Rejoin the basename to the extension
         if (ext) ext[-1] = '.';
@@ -149,17 +149,12 @@ static void add_image(int argc, char **argv)
         // Copy file and handle file errors.
         switch (cp(image_dest, path)) {
         case -1:
-            err(errno, APP_NAME ": %s: %s\n", image_dest,
-                strerror(errno));
-        case -2:
-            err(errno, APP_NAME ": %s: %s\n", path,
-                strerror(errno));
-        }
-
-        if (cp(image_dest, path) != 0) {
-            // Operation failed; remove image data from database.
             tagmage_delete_image(image_id);
-            err(1, "Unexpected I/O error\n");
+            err(errno, "%s", image_dest);
+        case -2:
+            tagmage_delete_image(image_id);
+            errno = 0;
+            err(errno, "%s", path);
         }
 
         printf("%i\n", image_id);
@@ -184,10 +179,10 @@ static void rm_image(int argc, char **argv)
 
     for (int i = 1; i < argc; i++) {
         if (sscanf(argv[i], "%i", &id) != 1)
-            err(1, "Unknown number '%s'.\n", argv[i]);
+            errx(1, "Unknown number '%s'.", argv[i]);
 
         if (tagmage_get_image(id, &img) != 0)
-            err(1, "Image %i doesn't exist.\n", id);
+            errx(1, "Image %i doesn't exist.", id);
 
         snprintf(path, PATH_MAX, "%s/%i.%s", db_path, id, img.ext);
         int status = remove(path);
