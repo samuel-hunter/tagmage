@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -7,7 +8,7 @@
 #include "util.h"
 
 
-void mkpath(const char *path, mode_t mode)
+int mkpath(const char *path, mode_t mode)
 {
     char curpath[PATH_MAX+1];
     int len = strlen(path);
@@ -19,12 +20,16 @@ void mkpath(const char *path, mode_t mode)
     for (int i = 1; i < len; i++) {
         if (curpath[i] == '/') {
             curpath[i] = '\0';
-            mkdir(curpath, mode);
+            if (mkdir(curpath, mode) != 0 && errno != EEXIST)
+                return -1;
             curpath[i] = '/';
         }
     }
 
-    mkdir(curpath, mode);
+    if (mkdir(curpath, mode) != 0 && errno != EEXIST)
+        return -1;
+
+    return 0;
 }
 
 int cp(const char *dst, const char *src)

@@ -9,7 +9,7 @@
 // Filesystem methods
 
 // Create a directories and all its parents
-void mkpath(const char *path, mode_t mode);
+int mkpath(const char *path, mode_t mode);
 
 // Copy a file from one location to the other
 int cp(const char *dst, const char *src);

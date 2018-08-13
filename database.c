@@ -122,10 +122,13 @@ int tagmage_setup(const char *db_path)
     CHECK_STATUS(rc);
 
     // double-check if the table is set up
-    PREPARE(stmt,
+    rc = PREPARE(stmt,
             "SELECT COUNT(*) FROM sqlite_master WHERE type='table'"
             "AND name IN ('image', 'tag', 'image_tag')");
+    CHECK_STATUS(rc);
+
     rc = sqlite3_step(stmt);
+
     count = sqlite3_column_int(stmt, 0);
     sqlite3_finalize(stmt);
 
@@ -183,6 +186,11 @@ int tagmage_new_image(const char *title, const char *ext)
 int tagmage_edit_title(int image_id, char *title)
 {
     sqlite3_stmt *stmt = NULL;
+
+    // Double-check it exists.
+    if (tagmage_get_image(image_id, NULL) < 0)
+        return -1;
+
     PREPARE(stmt,
             "UPDATE image SET title=:newtitle WHERE id=:imageid");
 
@@ -256,11 +264,13 @@ int tagmage_get_image(int image_id, Image *image)
         return -1;
     }
 
-    image->id = image_id;
-    strncpy((char*) &image->title,
-            (char*) sqlite3_column_text(stmt, 0), UTF8_MAX);
-    strncpy((char*) &image->ext,
-            (char*) sqlite3_column_text(stmt, 1), UTF8_MAX);
+    if (image) {
+        image->id = image_id;
+        strncpy((char*) &image->title,
+                (char*) sqlite3_column_text(stmt, 0), UTF8_MAX);
+        strncpy((char*) &image->ext,
+                (char*) sqlite3_column_text(stmt, 1), UTF8_MAX);
+    }
 
     sqlite3_finalize(stmt);
 
@@ -270,14 +280,15 @@ int tagmage_get_image(int image_id, Image *image)
 int tagmage_get_images(image_callback callback)
 {
     sqlite3_stmt *stmt = NULL;
-    int status;
+    int rc;
 
-    PREPARE(stmt, "SELECT id,title,ext FROM image");
+    rc = PREPARE(stmt, "SELECT id,title,ext FROM image");
+    CHECK_STATUS(rc);
 
-    status = iter_images(stmt, callback);
+    rc = iter_images(stmt, callback);
     sqlite3_finalize(stmt);
 
-    return status;
+    return rc;
 }
 
 int tagmage_get_untagged_images(image_callback callback)

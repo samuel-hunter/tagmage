@@ -207,6 +207,25 @@ static void rm_image(int argc, char **argv)
     }
 }
 
+static void edit_image(int argc, char **argv)
+{
+    int id = 0;
+    char *newtitle = NULL;
+
+    if (argc < 3) {
+        fprintf(stderr, "Not enough arguments.\n");
+        print_usage(1);
+    }
+
+    if (sscanf(argv[1], "%i", &id) != 1)
+        errx(1, "'%s' is not a valid number.", argv[1]);
+
+    newtitle = argv[2];
+
+    if (tagmage_edit_title(id, newtitle) < 0)
+        tagmage_err(1);
+}
+
 int main(int argc, char **argv)
 {
     int opt;
@@ -242,20 +261,22 @@ int main(int argc, char **argv)
     }
 
     // Create path to database if it's not set up already
-    mkpath(db_path, 0700);
+    if (mkpath(db_path, 0700) < 0)
+        err(1, "db_path");
 
     // Set up backend database
     char db_file[PATH_MAX + 1];
     strncpy(db_file, db_path, PATH_MAX);
     strncat(db_file, "/db.sqlite", PATH_MAX);
 
+    if (tagmage_setup(db_file) < 0)
+        tagmage_err(1);
+
     // Shift argc, argv to subcommands
     argc -= optind;
     argv += optind;
     optind = 1; // Reset getopt
 
-    if (tagmage_cleanup() < 0)
-        tagmage_err(1);
 
     // Sub-Commands
     if (argc == 0 || STREQ(argv[0], "help")) {
@@ -271,6 +292,8 @@ int main(int argc, char **argv)
         add_image(argc, argv);
     } else if (STREQ(argv[0], "rm")) {
         rm_image(argc, argv);
+    } else if (STREQ(argv[0], "edit")) {
+        edit_image(argc, argv);
     } else {
         // Unknown command
         fprintf(stderr, "Unknown command '%s'\n", argv[0]);
