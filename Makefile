@@ -28,7 +28,4 @@ test: $(OBJ) test.o
 clean:
 	rm -f tagmage test $(OBJ) tagmage.o test.o
 
-run: tagmage
-	./tagmage
-
-.PHONY: all options clean run test
+.PHONY: all options clean test

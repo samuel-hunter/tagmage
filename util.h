@@ -5,14 +5,6 @@
 
 #define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 
-void die(int status, const char *format, ...);
-
-// Allocation methods
-
-void *ecalloc(size_t nmemb, size_t size);
-void *emalloc(size_t size);
-void *erealloc(void *ptr, size_t size);
-
 
 // Filesystem methods
 

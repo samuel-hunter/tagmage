@@ -1,3 +1,5 @@
+#include <err.h>
+#include <errno.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,15 +12,11 @@
 // More semantic equality checker.
 #define STREQ(S1, S2) (!strcmp((S1),(S2)))
 
-#define ERR_UNKNOWN_FLAG "Unknown flag '%s'."
-#define ERR_UNKNOWN_SUBCMD "Unknown command '%s'."
+#define APP_NAME "tagmage"
 #define TAG_MAX 1024
 
 
 static char db_path[PATH_MAX+1] = {0};
-
-
-// Recursively create a directory path
 
 
 static void print_usage(int status)
@@ -73,10 +71,10 @@ static void print_path(int argc, char **argv)
     // Each subsequent argument is an image id
     for (int i = 1; i < argc; i++) {
         if (sscanf(argv[i], "%i", &item_id) < 0)
-            die(1, "Invalid number '%s'\n", argv[i]);
+            err(1, "Invalid number '%s'\n", argv[i]);
 
         if (tagmage_get_image(item_id, &img) != 0)
-            die(1, "Image %i doesn't exist.\n", item_id);
+            err(1, "Image %i doesn't exist.\n", item_id);
 
         printf("%s/%i.%s\n", db_path, img.id, img.ext);
     }
@@ -103,7 +101,7 @@ static void add_image(int argc, char **argv)
             while (seltok != NULL) {
                 tags[num_tags] = seltok;
                 if (++num_tags == TAG_MAX)
-                    die(1, "Too many tags!");
+                    err(1, "Too many tags!");
                 seltok = strtok(NULL, ",");
             }
             break;
@@ -142,16 +140,26 @@ static void add_image(int argc, char **argv)
 
         image_id = tagmage_new_image(basename, ext);
         if (image_id < 0)
-            die(1, "Unknown image id %i\n", image_id);
+            err(1, "Unknown image id %i\n", image_id);
 
         // Rejoin the basename to the extension
         if (ext) ext[-1] = '.';
 
         snprintf(image_dest, NAME_MAX, "%s/%i.%s", db_path, image_id, ext);
+        // Copy file and handle file errors.
+        switch (cp(image_dest, path)) {
+        case -1:
+            err(errno, APP_NAME ": %s: %s\n", image_dest,
+                strerror(errno));
+        case -2:
+            err(errno, APP_NAME ": %s: %s\n", path,
+                strerror(errno));
+        }
+
         if (cp(image_dest, path) != 0) {
             // Operation failed; remove image data from database.
             tagmage_delete_image(image_id);
-            die(1, "Unexpected I/O error\n");
+            err(1, "Unexpected I/O error\n");
         }
 
         printf("%i\n", image_id);
@@ -176,15 +184,21 @@ static void rm_image(int argc, char **argv)
 
     for (int i = 1; i < argc; i++) {
         if (sscanf(argv[i], "%i", &id) != 1)
-            die(1, "Unknown number '%s'.\n", argv[i]);
+            err(1, "Unknown number '%s'.\n", argv[i]);
 
         if (tagmage_get_image(id, &img) != 0)
-            die(1, "Image %i doesn't exist.\n", id);
+            err(1, "Image %i doesn't exist.\n", id);
 
         snprintf(path, PATH_MAX, "%s/%i.%s", db_path, id, img.ext);
-        if (remove(path) != 0) {
-            // TODO use `errno` to get a more descriptive error.
-            die(1, "Unknown I/O error.");
+        int status = remove(path);
+        if (status != 0) {
+            // I/O Error
+            warn("%s: %s\n", path, strerror(errno));
+            if (status != ENOENT)
+                exit(1);
+
+            // File doesn't exist; we can recover
+            fprintf(stderr, "Removing reference anyway...\n");
         }
 
         tagmage_delete_image(id);
@@ -242,7 +256,7 @@ int main(int argc, char **argv)
     // Sub-Commands
     if (argc == 0 || STREQ(argv[0], "help")) {
         // Default command; also runs if no other arguments exist
-        print_usage(1);
+        print_usage(0);
     } else if (STREQ(argv[0], "list")) {
         list_images(argc, argv);
         return 0;
