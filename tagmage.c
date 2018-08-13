@@ -2,15 +2,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include "core.h"
 #include "database.h"
 #include "util.h"
 
-// Increment the variable and assert that it's a valid argument index.
-#define INCARG(I) if (++I >= argc) \
-        die(1, "Expected value after '%s'\n", argv[I-1])
-
-#define ARGEQ(I, STR) !strcmp(argv[I], STR)
+// More semantic equality checker.
+#define STREQ(S1, S2) (!strcmp((S1),(S2)))
 
 #define ERR_UNKNOWN_FLAG "Unknown flag '%s'."
 #define ERR_UNKNOWN_SUBCMD "Unknown command '%s'."
@@ -18,7 +16,6 @@
 
 
 static char db_path[PATH_MAX+1] = {0};
-static char prog_name[NAME_MAX+1] = {0};
 
 
 // Recursively create a directory path
@@ -30,7 +27,7 @@ static void print_usage(int status)
     FILE *f = status ? stderr : stdout;
 
     fprintf(f,
-            "Usage: %s [ -f PATH ] COMMAND [ ... ]\n"
+            "Usage: tagmage [ -f PATH ] COMMAND [ ... ]\n"
             "\n"
             "  -f PATH  - Use the database at PATH over the default\n"
             "\n"
@@ -39,8 +36,7 @@ static void print_usage(int status)
             "  path [ IMAGE ... ] - List the path of the database.\n"
             "                 If IMAGE is provided, list that path.\n"
             "  add -t [ TAG1,TAG2,... ] IMAGE - Add an image to the\n"
-            "                 database\n\n",
-            prog_name);
+            "                 database\n\n");
     exit(status);
 }
 
@@ -52,12 +48,12 @@ static int print_image(const Image *image)
 
 static void list_images(int argc, char **argv)
 {
-    if (argc == 0) {
+    if (argc == 1) {
         tagmage_get_images(print_image);
         return;
     }
 
-    for (int i = 0; i < argc; i++) {
+    for (int i = 1; i < argc; i++) {
         tagmage_get_images_by_tag(argv[i], print_image);
         printf("\n");
     }
@@ -68,14 +64,14 @@ static void print_path(int argc, char **argv)
     Image img;
     int item_id;
 
-    if (argc == 0) {
+    if (argc == 1) {
         // print Database path if no image id provided
         printf("%s\n", db_path);
         return;
     }
 
     // Each subsequent argument is an image id
-    for (int i = 0; i < argc; i++) {
+    for (int i = 1; i < argc; i++) {
         if (sscanf(argv[i], "%i", &item_id) < 0)
             die(1, "Invalid number '%s'\n", argv[i]);
 
@@ -91,19 +87,16 @@ static void print_path(int argc, char **argv)
 static void add_image(int argc, char **argv)
 {
     char *path = NULL, *basename = NULL, *ext = NULL;
+    char *seltok;
     char image_dest[NAME_MAX + 1] = {'\0'};
-    int image_id = 0, i = 0;
+    int image_id = 0, opt = 0;
     char *tags[TAG_MAX] = {NULL};
     size_t num_tags = 0;
 
-    for (i = 0; i < argc; i++) {
-        // [ -t TAG1,TAG2,.. ] - optional list of comma separated tags
-        if (ARGEQ(i, "-t")) {
-            char *seltok;
-
-            // Get the comma-separated tag list and start tokenizing.
-            INCARG(i);
-            seltok = strtok(argv[i], ",");
+    while (opt = getopt(argc, argv, "t:"), opt != -1) {
+        switch (opt) {
+        case 't':
+            seltok = strtok(optarg, ",");
 
             // Go through the comma-separated taglist and add tags to
             // the taglist for later.
@@ -113,29 +106,21 @@ static void add_image(int argc, char **argv)
                     die(1, "Too many tags!");
                 seltok = strtok(NULL, ",");
             }
-        } else if (ARGEQ(i, "--")) {
-            // Everything after this is the images
-            i++;
             break;
-        } else if (argv[i][0] == '-') {
-            // Unknown flag
-            fprintf(stderr, ERR_UNKNOWN_FLAG, argv[i]);
+        case '?':
             print_usage(1);
-        } else {
-            // Images start at this point in the argument list.
             break;
         }
     }
 
     // Images expected here
-    if (i >= argc) {
-        fprintf(stderr, "Missing file operand after '%s'.\n",
-                argv[i-1]);
+    if (optind >= argc) {
+        fprintf(stderr, "Missing file operand.\n");
         print_usage(1);
     }
 
     // Iterate through each image
-    for (; i < argc; i++) {
+    for (int i = optind; i < argc; i++) {
         ext = basename = path = argv[i];
 
         // Search for the basename.
@@ -184,12 +169,12 @@ static void rm_image(int argc, char **argv)
     Image img;
     char path[PATH_MAX + 1];
 
-    if (argc == 0) {
+    if (argc == 1) {
         fprintf(stderr, "Missing file operand.\n");
         print_usage(1);
     }
 
-    for (int i = 0; i < argc; i++) {
+    for (int i = 1; i < argc; i++) {
         if (sscanf(argv[i], "%i", &id) != 1)
             die(1, "Unknown number '%s'.\n", argv[i]);
 
@@ -208,22 +193,21 @@ static void rm_image(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-    strncpy(prog_name, argv[0], NAME_MAX);
+    int opt;
 
-    int i;
-    for (i = 1; i < argc; i++) {
-        // Flags and Options
-        if (ARGEQ(i, "-f")) {
-            INCARG(i);
-            strncpy(db_path, argv[i], PATH_MAX);
-        } else if (ARGEQ(i, "-h")) {
+    while (opt = getopt(argc, argv, "hf:"), opt != -1) {
+        switch (opt) {
+        case 'h':
+            // alias for 'help' subcommand
             print_usage(0);
-            // exits
-        } else if (argv[i][0] == '-') {
-            // Unknown flag
-            fprintf(stderr, "Unknown flag '%s'\n", argv[i]);
+            break;
+        case 'f':
+            // Set custom database folder
+            strncpy(db_path, optarg, PATH_MAX);
+            break;
+        case '?':
+            // Error
             print_usage(1);
-        } else {
             break;
         }
     }
@@ -250,27 +234,32 @@ int main(int argc, char **argv)
     strncat(db_file, "/db.sqlite", PATH_MAX);
     tagmage_setup(db_file);
 
+    // Shift argc, argv to subcommands
+    argc -= optind;
+    argv += optind;
+    optind = 1; // Reset getopt
+
     // Sub-Commands
-    if (i == argc || ARGEQ(i, "help")) {
+    if (argc == 0 || STREQ(argv[0], "help")) {
         // Default command; also runs if no other arguments exist
         print_usage(1);
-    } else if (ARGEQ(i, "list")) {
-        list_images(argc - i - 1, argv + i + 1);
+    } else if (STREQ(argv[0], "list")) {
+        list_images(argc, argv);
         return 0;
-    } else if (ARGEQ(i, "path")) {
+    } else if (STREQ(argv[0], "path")) {
         // Give arguments to print_path for everythign past "path"
-        print_path(argc - i - 1, argv + i + 1);
+        print_path(argc, argv);
         return 0;
-    } else if (ARGEQ(i, "add")) {
+    } else if (STREQ(argv[0], "add")) {
         // Give arguments to add_image for everything past "add".
-        add_image(argc - i - 1, argv + i + 1);
+        add_image(argc, argv);
         return 0;
-    } else if (ARGEQ(i, "rm")) {
-        rm_image(argc - i - 1, argv + i + 1);
+    } else if (STREQ(argv[0], "rm")) {
+        rm_image(argc, argv);
         return 0;
     } else {
         // Unknown command
-        fprintf(stderr, "Unknown command '%s'\n", argv[i]);
+        fprintf(stderr, "Unknown command '%s'\n", argv[0]);
         print_usage(1);
     }
 }
