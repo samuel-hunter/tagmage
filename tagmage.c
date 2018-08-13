@@ -128,8 +128,11 @@ static void add_image(int argc, char **argv)
     }
 
     // Images expected here
-    if (i >= argc)
-        die(1, "Missing file operand after '%s'.\n", argv[i-1]);
+    if (i >= argc) {
+        fprintf(stderr, "Missing file operand after '%s'.\n",
+                argv[i-1]);
+        print_usage(1);
+    }
 
     // Iterate through each image
     for (; i < argc; i++) {
@@ -172,6 +175,34 @@ static void add_image(int argc, char **argv)
         for(size_t ti = 0; ti < num_tags; ti++) {
             tagmage_add_tag(image_id, tags[ti]);
         }
+    }
+}
+
+static void rm_image(int argc, char **argv)
+{
+    int id = 0;
+    Image img;
+    char path[PATH_MAX + 1];
+
+    if (argc == 0) {
+        fprintf(stderr, "Missing file operand.\n");
+        print_usage(1);
+    }
+
+    for (int i = 0; i < argc; i++) {
+        if (sscanf(argv[i], "%i", &id) != 1)
+            die(1, "Unknown number '%s'.\n", argv[i]);
+
+        if (tagmage_get_image(id, &img) != 0)
+            die(1, "Image %i doesn't exist.\n", id);
+
+        snprintf(path, PATH_MAX, "%s/%i.%s", db_path, id, img.ext);
+        if (remove(path) != 0) {
+            // TODO use `errno` to get a more descriptive error.
+            die(1, "Unknown I/O error.");
+        }
+
+        tagmage_delete_image(id);
     }
 }
 
@@ -225,6 +256,7 @@ int main(int argc, char **argv)
         print_usage(1);
     } else if (ARGEQ(i, "list")) {
         list_images(argc - i - 1, argv + i + 1);
+        return 0;
     } else if (ARGEQ(i, "path")) {
         // Give arguments to print_path for everythign past "path"
         print_path(argc - i - 1, argv + i + 1);
@@ -232,6 +264,9 @@ int main(int argc, char **argv)
     } else if (ARGEQ(i, "add")) {
         // Give arguments to add_image for everything past "add".
         add_image(argc - i - 1, argv + i + 1);
+        return 0;
+    } else if (ARGEQ(i, "rm")) {
+        rm_image(argc - i - 1, argv + i + 1);
         return 0;
     } else {
         // Unknown command
