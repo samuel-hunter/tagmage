@@ -79,7 +79,7 @@ static int print_path(int argc, char **argv)
 
         TAGMAGE_ASSERT(tagmage_get_image(item_id, &img));
 
-        printf("%s/%i.%s\n", db_path, img.id, img.ext);
+        printf("%s/%i%s\n", db_path, img.id, img.ext);
     }
 
     return 0;
@@ -88,6 +88,7 @@ static int print_path(int argc, char **argv)
 static int add_image(int argc, char **argv)
 {
     char *path = NULL, *basename = NULL, *ext = NULL;
+    char ext_buf[NAME_MAX + 1] = {'\0'};
     char *seltok;
     char image_dest[NAME_MAX + 1] = {'\0'};
     int image_id = 0, opt = 0;
@@ -116,7 +117,7 @@ static int add_image(int argc, char **argv)
 
     // Images expected here
     if (optind >= argc) {
-        fprintf(stderr, "Missing file operand.");
+        warnx("Missing file operand.");
         print_usage(stderr);
         return 1;
     }
@@ -131,24 +132,19 @@ static int add_image(int argc, char **argv)
 
         // Search for the file's extension.
         for (size_t i = 0; i < strlen(basename); i++)
-            if (basename[i] == '.') ext = basename + i + 1;
+            if (basename[i] == '.') ext = basename + i;
 
-        if (ext == basename) {
-            // If the extension still points to the basename, then
-            // there is no extension.
-            ext = NULL;
-        } else {
-            // Split the basename from the extension.
-            ext[-1] = 0;
+        if (ext != basename) {
+            strcpy(ext_buf, ext);
+            ext[0] = '\0';
         }
 
-        TAGMAGE_ASSERT(image_id = tagmage_new_image(basename, ext));
+        TAGMAGE_ASSERT(image_id = tagmage_new_image(basename,
+                                                    ext_buf));
 
-        // Rejoin the basename to the extension
-        if (ext) ext[-1] = '.';
-
-        snprintf(image_dest, NAME_MAX, "%s/%i.%s",
-                 db_path, image_id, ext);
+        snprintf(image_dest, NAME_MAX, "%s/%i%s",
+                 db_path, image_id, ext_buf);
+        ext[0] = '.';
         // Copy file and handle file errors.
         switch (cp(image_dest, path)) {
         case -1:
@@ -191,7 +187,7 @@ static int rm_image(int argc, char **argv)
 
         TAGMAGE_ASSERT(tagmage_get_image(id, &img));
 
-        snprintf(path, PATH_MAX, "%s/%i.%s", db_path, id, img.ext);
+        snprintf(path, PATH_MAX, "%s/%i%s", db_path, id, img.ext);
         int status = remove(path);
         if (status != 0) {
             // I/O Error

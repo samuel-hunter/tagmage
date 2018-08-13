@@ -27,7 +27,7 @@ static const char *db_setup_queries[] =
     {"CREATE TABLE image ("
      "  id INTEGER PRIMARY KEY,"
      "  title VARCHAR(100) NOT NULL,"
-     "  ext VARCHAR(10) NOT NULL );",
+     "  ext VARCHAR(10) );",
 
      "CREATE TABLE tag ("
      "  id INTEGER PRIMARY KEY,"
@@ -250,30 +250,35 @@ int tagmage_delete_image(int image_id)
 int tagmage_get_image(int image_id, Image *image)
 {
     sqlite3_stmt *stmt = NULL;
-    int rc;
+    int rc, status = 0;
 
     PREPARE(stmt, "SELECT title,ext FROM image WHERE id=:imageid");
     BIND(int, stmt, ":imageid", image_id);
 
     rc = sqlite3_step(stmt);
-    CHECK_STATUS(rc);
 
-    if (rc != SQLITE_ROW) {
+    switch (rc) {
+    case SQLITE_DONE:
         strncpy(tagmage_err_buf, "Image doesn't exist.", BUFFER_MAX);
-        return -1;
-    }
-
-    if (image) {
-        image->id = image_id;
-        strncpy((char*) &image->title,
-                (char*) sqlite3_column_text(stmt, 0), UTF8_MAX);
-        strncpy((char*) &image->ext,
-                (char*) sqlite3_column_text(stmt, 1), UTF8_MAX);
+        status = -1;
+        break;
+    case SQLITE_ROW:
+        if (image) {
+            image->id = image_id;
+            strncpy((char*) &image->title,
+                    (char*) sqlite3_column_text(stmt, 0), UTF8_MAX);
+            strncpy((char*) &image->ext,
+                    (char*) sqlite3_column_text(stmt, 1), UTF8_MAX);
+        }
+        break;
+    default:
+        seterr();
+        status = -1;
+        break;
     }
 
     sqlite3_finalize(stmt);
-
-    return 0;
+    return status;
 }
 
 int tagmage_get_images(image_callback callback)
@@ -329,28 +334,6 @@ int tagmage_search_images(int *tag_ids, image_callback callback) {
     return -1;
 }
 
-
-int tagmage_get_tag(int tag_id, Tag *tag)
-{
-    sqlite3_stmt *stmt = NULL;
-    int rc;
-
-    PREPARE(stmt, "SELECT name FROM tag WHERE id=:tagid");
-
-    rc = sqlite3_step(stmt);
-    CHECK_STATUS(rc);
-
-    if (rc != SQLITE_ROW) {
-        strncpy(tagmage_err_buf, "Tag dosn't exist.", BUFFER_MAX);
-        return -1;
-    }
-
-    tag->id = tag_id;
-    strncpy((char*) &tag->name, (char*) sqlite3_column_text(stmt, 0),
-            UTF8_MAX);
-
-    return 0;
-}
 
 int tagmage_get_tags(tag_callback callback)
 {
