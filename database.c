@@ -13,13 +13,14 @@
     } do {} while(0)
 // add "do {} while(0)" at end for semicolons
 
-#define PREPARE(STMT, QUERY) sqlite3_prepare_v2(db, QUERY, -1, &(STMT), NULL)
+#define PREPARE(STMT, QUERY) \
+    sqlite3_prepare_v2(db, QUERY, -1, &(STMT), NULL)
 #define BIND(TYPE, STMT, NAME, VAL) \
-    sqlite3_bind_##TYPE (STMT,                            \
-                         sqlite3_bind_parameter_index(STMT, NAME), VAL)
+    sqlite3_bind_##TYPE \
+    (STMT, sqlite3_bind_parameter_index(STMT, NAME), VAL)
 #define BIND_TEXT(STMT, NAME, VAL) \
-    sqlite3_bind_text(STMT,                               \
-                      sqlite3_bind_parameter_index(STMT, NAME), VAL, -1, NULL)
+    sqlite3_bind_text \
+    (STMT, sqlite3_bind_parameter_index(STMT, NAME), VAL, -1, NULL)
 
 #define BUFFER_MAX 4096
 
@@ -57,8 +58,10 @@ static int iter_images(sqlite3_stmt *stmt, image_callback callback)
     Image image;
     while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
         image.id = sqlite3_column_int(stmt, 0);
-        strncpy((char*) &image.title, (char*) sqlite3_column_text(stmt, 1), UTF8_MAX);
-        strncpy((char*) &image.ext, (char*) sqlite3_column_text(stmt, 2), UTF8_MAX);
+        strncpy((char*) &image.title,
+                (char*) sqlite3_column_text(stmt, 1), UTF8_MAX);
+        strncpy((char*) &image.ext,
+                (char*) sqlite3_column_text(stmt, 2), UTF8_MAX);
 
         // Exit early if the callback returns a nonzero status.
         if (callback(&image)) break;
@@ -79,7 +82,8 @@ static int iter_tags(sqlite3_stmt *stmt, tag_callback callback)
 
     while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
         tag.id = sqlite3_column_int(stmt, 0);
-        strncpy((char*) &tag.name, (char*) sqlite3_column_text(stmt, 1), UTF8_MAX);
+        strncpy((char*) &tag.name,
+                (char*) sqlite3_column_text(stmt, 1), UTF8_MAX);
 
         // Exit early if the callback returns a nonzero status.
         if (callback(&tag)) break;
@@ -118,10 +122,12 @@ int tagmage_setup(const char *db_path)
     CHECK_STATUS(rc);
 
     // double-check if the table is set up
-    PREPARE(stmt, "SELECT COUNT(*) FROM sqlite_master WHERE type='table'"
+    PREPARE(stmt,
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table'"
             "AND name IN ('image', 'tag', 'image_tag')");
     rc = sqlite3_step(stmt);
     count = sqlite3_column_int(stmt, 0);
+    sqlite3_finalize(stmt);
 
     if (count != 3) {
         // Set up the new database
@@ -161,7 +167,8 @@ int tagmage_new_image(const char *title, const char *ext)
     sqlite3_stmt *stmt = NULL;
     int rc = 0;
 
-    PREPARE(stmt, "INSERT INTO image (title, ext) VALUES (:title, :ext)");
+    PREPARE(stmt,
+            "INSERT INTO image (title, ext) VALUES (:title, :ext)");
     BIND_TEXT(stmt, ":title", title);
     BIND_TEXT(stmt, ":ext", ext);
 

@@ -132,8 +132,8 @@ static void add_image(int argc, char **argv)
             if (basename[i] == '.') ext = basename + i + 1;
 
         if (ext == basename) {
-            // If the extension still points to the basename, then there
-            // is no extension.
+            // If the extension still points to the basename, then
+            // there is no extension.
             ext = NULL;
         } else {
             // Split the basename from the extension.
@@ -147,7 +147,8 @@ static void add_image(int argc, char **argv)
         // Rejoin the basename to the extension
         if (ext) ext[-1] = '.';
 
-        snprintf(image_dest, NAME_MAX, "%s/%i.%s", db_path, image_id, ext);
+        snprintf(image_dest, NAME_MAX, "%s/%i.%s",
+                 db_path, image_id, ext);
         // Copy file and handle file errors.
         switch (cp(image_dest, path)) {
         case -1:
