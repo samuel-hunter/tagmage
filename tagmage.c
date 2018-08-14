@@ -33,7 +33,7 @@ static void print_usage(FILE *f)
             "\n"
             "  add [-t TAG1,TAG2,...] IMAGES..\n"
             "  edit IMAGE TITLE\n"
-            "  list [TAGS..]\n"
+            "  list [TAG]\n"
             "  tag IMAGE [TAGS..]\n"
             "  untag IMAGE [TAGS..]\n"
             "  tags IMAGE\n"
@@ -62,11 +62,7 @@ static int list_images(int argc, char **argv)
         return 0;
     }
 
-    for (int i = 1; i < argc; i++) {
-        TAGMAGE_ASSERT(tagmage_get_images_by_tag(argv[i],
-                                                 print_image));
-        printf("\n");
-    }
+    TAGMAGE_ASSERT(tagmage_get_images_by_tag(argv[1], print_image));
 
     return 0;
 }

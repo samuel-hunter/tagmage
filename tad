@@ -16,7 +16,7 @@ getext() {
 populate() {
     tagmage list ${1-} | while read id ext fname; do
         echo $id $ext $fname >&2
-        ln -s "$(tagmage path $id)" "${id}-${fname}${ext}"
+        ln -vs "$(tagmage path $id)" "${id}-${fname}${ext}"
     done
 }
 
