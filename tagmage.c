@@ -31,7 +31,7 @@ static void print_usage(FILE *f)
             "\n"
             "  -f SAVE  - Set custom save directory.\n"
             "\n"
-            "  add [-f TAG1,TAG2,...] IMAGES..\n"
+            "  add [-t TAG1,TAG2,...] IMAGES..\n"
             "  edit IMAGE TITLE\n"
             "  list [TAGS..]\n"
             "  tag IMAGE [TAGS..]\n"
@@ -300,7 +300,7 @@ int main(int argc, char **argv)
 {
     int opt, status = 0;
 
-    while (opt = getopt(argc, argv, "hf:"), opt != -1) {
+    while (opt = getopt(argc, argv, "+hf:"), opt != -1) {
         switch (opt) {
         case 'h':
             // alias for 'help' subcommand
