@@ -20,10 +20,12 @@ tagmage - save, organize and list images via tags.
 Sets the save directory to
 .IR SAVE .
 If this option is not present, the save directory will be set to
+.I $TAGMAGE_HOME
+if the variable is set. Else, it will be set to
 .IR $XDG_HOME /tagmage
 if
 .I $XDG_HOME
-exists. If not, it will be set to
+is set. Else, it will be set to
 .IR $HOME /.local/share/tagmage "" .
 .RE
 

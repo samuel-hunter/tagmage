@@ -316,14 +316,18 @@ int main(int argc, char **argv)
 
     // Set-up db_path if it's not yet initialized
     if (db_path[0] == '\0') {
-        char *xdg = getenv("XDG_DATA_HOME");
-        if (xdg) {
+        char *env;
+        if (env = getenv("TAGMAGE_HOME"), env) {
+            // Use $TAGMAGE_SAVE as first default
+            strncpy(db_path, env, PATH_MAX);
+        } else if (env = getenv("XDG_DATA_HOME"), env) {
             // Use $XDG_DATA_HOME/tagmage as default
-            strncat(db_path, xdg, PATH_MAX);
+            snprintf(db_path, PATH_MAX,
+                     "%s/tagmage", env);
         } else {
             // Use $HOME/.local/share/tagmage as backup default
-            strncpy(db_path, getenv("HOME"), PATH_MAX);
-            strncat(db_path, "/.local/share/tagmage", PATH_MAX);
+            snprintf(db_path, PATH_MAX,
+                     "%s/.local/share/tagmage", getenv("HOME"));
         }
     }
 

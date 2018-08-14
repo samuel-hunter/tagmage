@@ -15,8 +15,7 @@ getext() {
 
 populate() {
     tagmage list ${1-} | while read id ext fname; do
-        echo $id $ext $fname >&2
-        ln -vs "$(tagmage path $id)" "${id}-${fname}${ext}"
+        ln -s "$(tagmage path $id)" "$(printf %05d $id)-${fname}${ext}"
     done
 }
 
@@ -39,12 +38,12 @@ case $cmd in
         cd $imgdir
 
         if [ "$#" -eq 0 ]; then
-            populate
+            populate &
         else
             until [ "$#" -eq 0 ]; do
                 mkdir "$1"
                 cd "$1"
-                populate "$1"
+                populate "$1" &
                 cd ..
                 shift
             done
