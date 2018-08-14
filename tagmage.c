@@ -279,8 +279,8 @@ int list_tags(int argc, char **argv)
     int image_id = 0;
 
     if (argc == 1) {
-        warnx("Missing image after '%s'.", argv[0]);
-        return -1;
+        TAGMAGE_ASSERT(tagmage_get_tags(&print_tag));
+        return 0;
     }
 
     if (sscanf(argv[1], "%i", &image_id) != 1) {
