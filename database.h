@@ -16,6 +16,7 @@ int tagmage_new_image(const char *title, const char *ext);
 
 int tagmage_edit_title(int image_id, char *title);
 int tagmage_add_tag(int image_id, char *tag_name);
+int tagmage_remove_tag(int image_id, char *tag_name);
 int tagmage_delete_image(int image_id);
 
 int tagmage_get_image(int image_id, Image *image);

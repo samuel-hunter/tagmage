@@ -69,6 +69,40 @@ is provided, it lists the path of the image id.
 .RE
 
 .PP
+.B tag
+.I IMAGE
+.RI [ TAGS.. ]
+.RS 4
+Add
+.I TAGS
+to
+.IR IMAGE .
+If a tag is already assigned to
+.IR IMAGE ,
+the program silently succeeds.
+.RE
+
+.PP
+.B untag
+.I IMAGE
+.RI [ TAGS.. ]
+.RS 4
+Removes
+.I TAGS
+from
+.IR IMAGE .
+If a tag was not yet assigned to
+.IR IMAGE ,
+the program silently succeeds.
+.RE
+
+.PP
+.B tags
+.I IMAGE
+.RS
+Prints a list of newline-delimited tags the image has to standard output.
+
+.PP
 .B rm
 .I IMAGES..
 .RS 4

@@ -231,6 +231,26 @@ int tagmage_add_tag(int image_id, char *tag_name)
     return 0;
 }
 
+int tagmage_remove_tag(int image_id, char *tag_name)
+{
+    sqlite3_stmt *stmt;
+    int rc;
+
+    rc = PREPARE(stmt,
+                 "DELETE FROM image_tag"
+                 " WHERE image=:img"
+                 " AND tag=(SELECT id FROM tag WHERE name=:tag)");
+    CHECK_STATUS(rc);
+    BIND(int, stmt, ":img", image_id);
+    BIND_TEXT(stmt, ":tag", tag_name);
+
+    rc = sqlite3_step(stmt);
+    CHECK_STATUS(rc);
+    sqlite3_finalize(stmt);
+
+    return 0;
+}
+
 int tagmage_delete_image(int image_id)
 {
     sqlite3_stmt *stmt = NULL;

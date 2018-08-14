@@ -29,11 +29,14 @@ static void print_usage(FILE *f)
     fprintf(f,
             "Usage: tagmage [ -f PATH ] COMMAND [ ... ]\n"
             "\n"
-            "  -f SAVE\n  - Set custom save directory.\n"
+            "  -f SAVE  - Set custom save directory.\n"
             "\n"
             "  add [-f TAG1,TAG2,...] IMAGES..\n"
             "  edit IMAGE TITLE\n"
             "  list [TAGS..]\n"
+            "  tag IMAGE [TAGS..]\n"
+            "  untag IMAGE [TAGS..]\n"
+            "  tags IMAGE\n"
             "  path [IMAGES..]\n"
             "  rm IMAGES..\n"
             "\n"
@@ -43,6 +46,12 @@ static void print_usage(FILE *f)
 static int print_image(const Image *image)
 {
     printf("%i %s %s\n", image->id, image->ext, image->title);
+    return 0;
+}
+
+static int print_tag(const Tag *tag)
+{
+    printf("%s\n", tag->name);
     return 0;
 }
 
@@ -227,6 +236,66 @@ static int edit_image(int argc, char **argv)
     return 0;
 }
 
+int tag_image(int argc, char **argv)
+{
+    int image_id = 0;
+
+    if (argc == 1) {
+        warnx("Missing image after '%s'.", argv[0]);
+        return -1;
+    }
+
+    if (sscanf(argv[1], "%i", &image_id) != 1) {
+        warnx("'%s' is not a valid number.", argv[1]);
+        return -1;
+    }
+
+    for (int i = 2; i < argc; i++) {
+        TAGMAGE_ASSERT(tagmage_add_tag(image_id, argv[i]));
+    }
+
+    return 0;
+}
+
+int untag_image(int argc, char **argv)
+{
+    int image_id = 0;
+
+    if (argc == 1) {
+        warnx("Missing image after '%s'.", argv[0]);
+        return -1;
+    }
+
+    if (sscanf(argv[1], "%i", &image_id) != 1) {
+        warnx("'%s' is not a valid number.", argv[1]);
+        return -1;
+    }
+
+    for (int i = 2; i < argc; i++) {
+        TAGMAGE_ASSERT(tagmage_remove_tag(image_id, argv[i]));
+    }
+
+    return 0;
+}
+
+int list_tags(int argc, char **argv)
+{
+    int image_id = 0;
+
+    if (argc == 1) {
+        warnx("Missing image after '%s'.", argv[0]);
+        return -1;
+    }
+
+    if (sscanf(argv[1], "%i", &image_id) != 1) {
+        warnx("'%s' is not a valid number.", argv[1]);
+        return -1;
+    }
+
+    TAGMAGE_ASSERT(tagmage_get_tags_by_image(image_id, &print_tag));
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     int opt, status = 0;
@@ -293,6 +362,12 @@ int main(int argc, char **argv)
         status = add_image(argc, argv);
     } else if (STREQ(argv[0], "rm")) {
         status = rm_image(argc, argv);
+    } else if (STREQ(argv[0], "tag")) {
+        status = tag_image(argc, argv);
+    } else if (STREQ(argv[0], "untag")) {
+        status = untag_image(argc, argv);
+    } else if (STREQ(argv[0], "tags")) {
+        status = list_tags(argc, argv);
     } else if (STREQ(argv[0], "edit")) {
         status = edit_image(argc, argv);
     } else {
