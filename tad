@@ -19,11 +19,17 @@ populate() {
     done
 }
 
+setupdir() {
+    rm -rf $imgdir
+    mkdir -p $imgdir
+    cd $imgdir
+}
+
 # The tmdir frontend mirrors the commands in the backend; they're just
 # done differently.
 case $cmd in
     add)
-        # This has no behavior difference
+        # This has no behavior difference to the backend.
         tagmage add "$@"
         ;;
     edit)
@@ -33,9 +39,7 @@ case $cmd in
         mv "$1" "${image_id}-${1}${ext}"
         ;;
     list)
-        rm -rf $imgdir
-        mkdir -p $imgdir
-        cd $imgdir
+        setupdir
 
         if [ "$#" -eq 0 ]; then
             populate &
@@ -50,6 +54,17 @@ case $cmd in
         fi
 
         echo $imgdir
+        ;;
+    listall)
+        setupdir
+
+        # Give every tag its own folder
+        tagmage tags | while read tag; do
+            mkdir "$tag"
+            cd "$tag"
+            populate "$tag" &
+            cd ..
+        done
         ;;
     tag)
         image_id=$(getid "$1")
