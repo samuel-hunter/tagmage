@@ -6,8 +6,12 @@ cmd=${1?Command expected.}
 shift
 
 getid() {
-    basename "$1" | grep -Po '^\d+' | \
-        sed 's/^0*//' # Remove leading zeroes
+    id=$(basename "$1" | grep -Po '^\d+')
+    if [ "${2-}" = "-r" ]; then
+        echo $id
+    else
+        echo $id | sed 's/^0*//' # Remove leading zeroes
+    fi
 }
 
 getext() {
@@ -37,7 +41,7 @@ case $cmd in
         image_id=$(getid "$1")
         ext=$(getext "$1")
         tagmage edit $image_id "$2"
-        mv "$1" "${image_id}-${1}${ext}"
+        mv "$1" "$(getid "$1" -r)-${2}${ext}"
         ;;
     list)
         setupdir

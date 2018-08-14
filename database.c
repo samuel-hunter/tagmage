@@ -96,6 +96,17 @@ static int iter_tags(sqlite3_stmt *stmt, tag_callback callback)
     return 0;
 }
 
+static int cleanup_tags()
+{
+    int rc = sqlite3_exec(db,
+                      "DELETE FROM tag WHERE id NOT IN"
+                      " (SELECT tag FROM image_tag)",
+                      NULL, NULL, NULL);
+    CHECK_STATUS(rc);
+
+    return 0;
+}
+
 
 void tagmage_warn()
 {
@@ -248,7 +259,7 @@ int tagmage_remove_tag(int image_id, char *tag_name)
     CHECK_STATUS(rc);
     sqlite3_finalize(stmt);
 
-    return 0;
+    return cleanup_tags();
 }
 
 int tagmage_delete_image(int image_id)
@@ -263,13 +274,7 @@ int tagmage_delete_image(int image_id)
     CHECK_STATUS(rc);
     sqlite3_finalize(stmt);
 
-    rc = sqlite3_exec(db,
-                      "DELETE FROM tag WHERE id NOT IN"
-                      " (SELECT tag FROM image_tag)",
-                      NULL, NULL, NULL);
-    CHECK_STATUS(rc);
-
-    return 0;
+    return cleanup_tags();
 }
 
 
