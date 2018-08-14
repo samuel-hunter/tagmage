@@ -29,6 +29,7 @@ install: tagmage
 	install -m 644 tagmage.1 $(MANDIR)/man1/tagmage.1
 	mkdir -p $(PREFIXDIR)/bin
 	install -m 755 tagmage $(PREFIXDIR)/bin/tagmage
+	install -m 755 tad $(PREFIXDIR)/bin/tad
 
 clean:
 	rm -f tagmage test $(OBJ) tagmage.o test.o

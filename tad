@@ -1,0 +1,78 @@
+#!/bin/bash
+
+set -eu
+imgdir=/tmp/tad-$USER
+cmd=${1?Command expected.}
+shift
+
+getid() {
+    basename "$1" | grep -Po '^\d+'
+}
+
+getext() {
+    echo "$1" | grep -Po '\..+' || true
+}
+
+populate() {
+    tagmage list ${1-} | while read id ext fname; do
+        echo $id $ext $fname >&2
+        ln -s "$(tagmage path $id)" "${id}-${fname}${ext}"
+    done
+}
+
+# The tmdir frontend mirrors the commands in the backend; they're just
+# done differently.
+case $cmd in
+    add)
+        # This has no behavior difference
+        tagmage add "$@"
+        ;;
+    edit)
+        image_id=$(getid "$1")
+        ext=$(getext "$1")
+        tagmage edit $image_id "$2"
+        mv "$1" "${image_id}-${1}${ext}"
+        ;;
+    list)
+        rm -rf $imgdir
+        mkdir -p $imgdir
+        cd $imgdir
+
+        if [ "$#" -eq 0 ]; then
+            populate
+        else
+            until [ "$#" -eq 0 ]; do
+                mkdir "$1"
+                cd "$1"
+                populate "$1"
+                cd ..
+                shift
+            done
+        fi
+
+        echo $imgdir
+        ;;
+    tag)
+        image_id=$(getid "$1")
+        shift
+        tagmage tag $image_id "$@"
+        ;;
+    untag)
+        image_id=$(getid "$1")
+        shift
+        tagmage untag $image_id "$@"
+        ;;
+    path)
+        readlink "$1"
+        ;;
+    tags)
+        tagmage tags $(getid "$1")
+        ;;
+    rm)
+        while [ "$#" -gt 0 ]; do
+            tagmage rm $(getid "$1")
+            rm "$1"
+            shift
+        done
+        ;;
+esac
