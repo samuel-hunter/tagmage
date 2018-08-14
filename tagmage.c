@@ -8,11 +8,13 @@
 #include "database.h"
 #include "util.h"
 
+#define APP_NAME "tagmage"
+#define TAG_MAX 1024
+
 // More semantic equality checker.
 #define STREQ(S1, S2) (!strcmp((S1),(S2)))
 
-#define APP_NAME "tagmage"
-#define TAG_MAX 1024
+#define UNUSED(X) ((void)(X))
 
 #define TAGMAGE_ASSERT(EXPR) if ((EXPR) < 0) { \
     tagmage_warn(); \
@@ -64,6 +66,15 @@ static int list_images(int argc, char **argv)
 
     TAGMAGE_ASSERT(tagmage_get_images_by_tag(argv[1], print_image));
 
+    return 0;
+}
+
+static int list_untagged(int argc, char **argv)
+{
+    UNUSED(argc);
+    UNUSED(argv);
+
+    TAGMAGE_ASSERT(tagmage_get_untagged_images(print_image));
     return 0;
 }
 
@@ -354,6 +365,8 @@ int main(int argc, char **argv)
         print_usage(stdout);
     } else if (STREQ(argv[0], "list")) {
         status = list_images(argc, argv);
+    } else if (STREQ(argv[0], "untagged")) {
+        status = list_untagged(argc, argv);
     } else if (STREQ(argv[0], "path")) {
         // Give arguments to print_path for everythign past "path"
         status = print_path(argc, argv);

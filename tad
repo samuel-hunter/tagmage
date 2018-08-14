@@ -6,7 +6,8 @@ cmd=${1?Command expected.}
 shift
 
 getid() {
-    basename "$1" | grep -Po '^\d+'
+    basename "$1" | grep -Po '^\d+' | \
+        sed 's/^0*//' # Remove leading zeroes
 }
 
 getext() {
@@ -64,6 +65,13 @@ case $cmd in
             cd "$tag"
             populate "$tag" &
             cd ..
+        done
+
+        # Do the same for untagged images
+        mkdir '(untagged)'
+        cd '(untagged)'
+        tagmage untagged | while read id ext fname; do
+            ln -s "$(tagmage path $id)" "$(printf %05d $id)-${fname}${ext}"
         done
         ;;
     tag)

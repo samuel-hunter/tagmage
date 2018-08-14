@@ -327,7 +327,7 @@ int tagmage_get_untagged_images(image_callback callback)
     int status;
 
     PREPARE(stmt,
-            "SELECT id, title, ext,  FROM image "
+            "SELECT id, title, ext FROM image "
             "  WHERE id NOT IN (SELECT image FROM image_tag)");
 
     status = iter_images(stmt, callback);
