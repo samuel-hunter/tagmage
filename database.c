@@ -263,6 +263,12 @@ int tagmage_delete_image(int image_id)
     CHECK_STATUS(rc);
     sqlite3_finalize(stmt);
 
+    rc = sqlite3_exec(db,
+                      "DELETE FROM tag WHERE id NOT IN"
+                      " (SELECT tag FROM image_tag)",
+                      NULL, NULL, NULL);
+    CHECK_STATUS(rc);
+
     return 0;
 }
 
