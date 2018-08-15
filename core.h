@@ -14,9 +14,4 @@ typedef struct Image {
     utf8 ext[UTF8_MAX + 1];
 } Image;
 
-typedef struct Tag {
-    int id;
-    utf8 name[UTF8_MAX + 1];
-} Tag;
-
 #endif /* CORE_H */

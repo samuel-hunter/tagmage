@@ -58,10 +58,9 @@ static int print_image(const Image *image, void *arg)
     return 0;
 }
 
-static int print_tag(const Tag *tag, void *arg)
+static int print_tag(const char *tag)
 {
-    UNUSED(arg);
-    printf("%s\n", tag->name);
+    printf("%s\n", tag);
     return 0;
 }
 
@@ -96,11 +95,8 @@ static int list_images(int argc, char **argv)
     return 0;
 }
 
-static int list_untagged(int argc, char **argv)
+static int list_untagged()
 {
-    UNUSED(argc);
-    UNUSED(argv);
-
     TAGMAGE_ASSERT(tagmage_get_untagged_images(print_image, NULL));
     return 0;
 }
@@ -317,7 +313,7 @@ int list_tags(int argc, char **argv)
     int image_id = 0;
 
     if (argc == 1) {
-        TAGMAGE_ASSERT(tagmage_get_tags(&print_tag, NULL));
+        TAGMAGE_ASSERT(tagmage_get_tags(&print_tag));
         return 0;
     }
 
@@ -326,7 +322,7 @@ int list_tags(int argc, char **argv)
         return -1;
     }
 
-    TAGMAGE_ASSERT(tagmage_get_tags_by_image(image_id, &print_tag, NULL));
+    TAGMAGE_ASSERT(tagmage_get_tags_by_image(image_id, &print_tag));
     return 0;
 }
 
@@ -393,7 +389,7 @@ int main(int argc, char **argv)
     } else if (STREQ(argv[0], "list")) {
         status = list_images(argc, argv);
     } else if (STREQ(argv[0], "untagged")) {
-        status = list_untagged(argc, argv);
+        status = list_untagged();
     } else if (STREQ(argv[0], "path")) {
         status = print_path(argc, argv);
     } else if (STREQ(argv[0], "add")) {

@@ -74,18 +74,16 @@ static int iter_images(sqlite3_stmt *stmt, image_callback callback, void *arg)
     return 0;
 }
 
-static int iter_tags(sqlite3_stmt *stmt, tag_callback callback, void *arg)
+static int iter_tags(sqlite3_stmt *stmt, tag_callback callback)
 {
     int rc;
-    Tag tag;
+    char tag[UTF8_MAX];
 
     while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-        tag.id = sqlite3_column_int(stmt, 0);
-        strncpy((char*) &tag.name,
-                (char*) sqlite3_column_text(stmt, 1), UTF8_MAX);
+        strncpy(tag, (char*) sqlite3_column_text(stmt, 1), UTF8_MAX);
 
         // Exit early if the callback returns a nonzero status.
-        if (callback(&tag, arg)) break;
+        if (callback(tag)) break;
     }
 
     if (rc != SQLITE_DONE) {
@@ -386,20 +384,20 @@ int tagmage_has_tag(int image_id, char *tag_name) {
     }
 }
 
-int tagmage_get_tags(tag_callback callback, void *arg)
+int tagmage_get_tags(tag_callback callback)
 {
     sqlite3_stmt *stmt = NULL;
     int status;
 
     PREPARE(stmt, "SELECT id, name FROM tag");
 
-    status = iter_tags(stmt, callback, arg);
+    status = iter_tags(stmt, callback);
     sqlite3_finalize(stmt);
 
     return status;
 }
 
-int tagmage_get_tags_by_image(int image_id, tag_callback callback, void *arg)
+int tagmage_get_tags_by_image(int image_id, tag_callback callback)
 {
     sqlite3_stmt *stmt = NULL;
     int status;
@@ -410,7 +408,7 @@ int tagmage_get_tags_by_image(int image_id, tag_callback callback, void *arg)
             "                WHERE image = :imageid)");
     BIND(int, stmt, ":imageid", image_id);
 
-    status = iter_tags(stmt, callback, arg);
+    status = iter_tags(stmt, callback);
     sqlite3_finalize(stmt);
 
     return status;

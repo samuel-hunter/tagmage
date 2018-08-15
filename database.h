@@ -5,7 +5,7 @@
 
 // Return any non-zero value to exit the callback loop.
 typedef int (*image_callback)(const Image*, void*);
-typedef int (*tag_callback)(const Tag*, void*);
+typedef int (*tag_callback)(const char*);
 
 void tagmage_warn();
 
@@ -25,7 +25,7 @@ int tagmage_get_untagged_images(image_callback callback, void *arg);
 int tagmage_get_images_by_tag(char *tag, image_callback callback, void *arg);
 
 int tagmage_has_tag(int image_id, char *tag_name);
-int tagmage_get_tags(tag_callback callback, void *arg);
-int tagmage_get_tags_by_image(int image_id, tag_callback callback, void *arg);
+int tagmage_get_tags(tag_callback callback);
+int tagmage_get_tags_by_image(int image_id, tag_callback callback);
 
 #endif /* BACKEND_H */
