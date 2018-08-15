@@ -21,6 +21,11 @@
     return 1; \
     } do {} while (0)
 
+typedef struct Args {
+    int argc;
+    char **argv;
+} Args;
+
 
 static char db_path[PATH_MAX+1] = {0};
 
@@ -36,6 +41,7 @@ static void print_usage(FILE *f)
             "  add [-t TAG1,TAG2,...] IMAGES..\n"
             "  edit IMAGE TITLE\n"
             "  list [TAG]\n"
+            "  search [TAGS..]\n"
             "  untagged\n"
             "  tag IMAGE [TAGS..]\n"
             "  untag IMAGE [TAGS..]\n"
@@ -69,6 +75,34 @@ static int list_images(int argc, char **argv)
 
     TAGMAGE_ASSERT(tagmage_get_images_by_tag(argv[1], print_image, NULL));
 
+    return 0;
+}
+
+static int print_image_conditional(const Image *image, void *argsptr)
+{
+    Args *args = argsptr;
+    int status;
+
+    for (int i = 1; i < args->argc; i++) {
+        status = tagmage_has_tag(image->id, args->argv[i]);
+        switch (status) {
+        case -1:
+            tagmage_warn();
+            return -1;
+        case 0:
+            return 0;
+        }
+    }
+
+    printf("%i %s %s\n", image->id, image->ext, image->title);
+
+    return 0;
+}
+
+static int search_images(int argc, char **argv)
+{
+    Args args = {.argc = argc, .argv = argv};
+    TAGMAGE_ASSERT(tagmage_get_images(&print_image_conditional, &args));
     return 0;
 }
 
@@ -368,13 +402,13 @@ int main(int argc, char **argv)
         print_usage(stdout);
     } else if (STREQ(argv[0], "list")) {
         status = list_images(argc, argv);
+    } else if (STREQ(argv[0], "search")) {
+        status = search_images(argc, argv);
     } else if (STREQ(argv[0], "untagged")) {
         status = list_untagged(argc, argv);
     } else if (STREQ(argv[0], "path")) {
-        // Give arguments to print_path for everythign past "path"
         status = print_path(argc, argv);
     } else if (STREQ(argv[0], "add")) {
-        // Give arguments to add_image for everything past "add".
         status = add_image(argc, argv);
     } else if (STREQ(argv[0], "rm")) {
         status = rm_image(argc, argv);

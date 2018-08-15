@@ -360,11 +360,31 @@ int tagmage_get_images_by_tag(char *tag, image_callback callback, void *arg)
     return status;
 }
 
-int tagmage_search_images(int *tag_ids, image_callback callback, void *arg) {
-    strncpy(tagmage_err_buf, "Unsupported operation.", BUFFER_MAX);
-    return -1;
-}
 
+int tagmage_has_tag(int image_id, char *tag_name) {
+    sqlite3_stmt *stmt = NULL;
+    int rc;
+
+    rc = PREPARE(stmt,
+            "SELECT image FROM image_tag"
+            " WHERE image=:image"
+            " AND tag=(SELECT id FROM tag WHERE name=:tag)");
+    BIND(int, stmt, ":image", image_id);
+    rc = BIND_TEXT(stmt, ":tag", tag_name);
+
+    rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    switch (rc) {
+    case SQLITE_DONE:
+        return 0;
+    case SQLITE_ROW:
+        return 1;
+    default:
+        seterr();
+        return -1;
+    }
+}
 
 int tagmage_get_tags(tag_callback callback, void *arg)
 {

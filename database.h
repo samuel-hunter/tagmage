@@ -23,8 +23,8 @@ int tagmage_get_image(int image_id, Image *image);
 int tagmage_get_images(image_callback callback, void *arg);
 int tagmage_get_untagged_images(image_callback callback, void *arg);
 int tagmage_get_images_by_tag(char *tag, image_callback callback, void *arg);
-int tagmage_search_images(int *tag_ids, image_callback callback, void *arg);
 
+int tagmage_has_tag(int image_id, char *tag_name);
 int tagmage_get_tags(tag_callback callback, void *arg);
 int tagmage_get_tags_by_image(int image_id, tag_callback callback, void *arg);
 
