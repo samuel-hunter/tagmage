@@ -21,10 +21,10 @@
     return 1; \
     } do {} while (0)
 
-typedef struct Args {
-    int argc;
-    char **argv;
-} Args;
+typedef struct TagVector {
+    int size;
+    char **tags;
+} TagVector;
 
 
 static char db_path[PATH_MAX+1] = {0};
@@ -40,8 +40,7 @@ static void print_usage(FILE *f)
             "\n"
             "  add [-t TAG1,TAG2,...] IMAGES..\n"
             "  edit IMAGE TITLE\n"
-            "  list [TAG]\n"
-            "  search [TAGS..]\n"
+            "  list [TAGS..]\n"
             "  untagged\n"
             "  tag IMAGE [TAGS..]\n"
             "  untag IMAGE [TAGS..]\n"
@@ -66,30 +65,21 @@ static int print_tag(const Tag *tag, void *arg)
     return 0;
 }
 
-static int list_images(int argc, char **argv)
+static int print_image_with_tags(const Image *image, void *argsptr)
 {
-    if (argc == 1) {
-        TAGMAGE_ASSERT(tagmage_get_images(print_image, NULL));
-        return 0;
-    }
-
-    TAGMAGE_ASSERT(tagmage_get_images_by_tag(argv[1], print_image, NULL));
-
-    return 0;
-}
-
-static int print_image_conditional(const Image *image, void *argsptr)
-{
-    Args *args = argsptr;
+    TagVector *args = argsptr;
     int status;
 
-    for (int i = 1; i < args->argc; i++) {
-        status = tagmage_has_tag(image->id, args->argv[i]);
+    for (int i = 0; i < args->size; i++) {
+        // Check if image has tag.
+        status = tagmage_has_tag(image->id, args->tags[i]);
         switch (status) {
         case -1:
+            // Error; report it and exit early.
             tagmage_warn();
             return -1;
         case 0:
+            // Tag doesn't exist; break out.
             return 0;
         }
     }
@@ -99,10 +89,10 @@ static int print_image_conditional(const Image *image, void *argsptr)
     return 0;
 }
 
-static int search_images(int argc, char **argv)
+static int list_images(int argc, char **argv)
 {
-    Args args = {.argc = argc, .argv = argv};
-    TAGMAGE_ASSERT(tagmage_get_images(&print_image_conditional, &args));
+    TagVector args = {.size = argc - 1, .tags = argv + 1};
+    TAGMAGE_ASSERT(tagmage_get_images(&print_image_with_tags, &args));
     return 0;
 }
 
@@ -402,8 +392,6 @@ int main(int argc, char **argv)
         print_usage(stdout);
     } else if (STREQ(argv[0], "list")) {
         status = list_images(argc, argv);
-    } else if (STREQ(argv[0], "search")) {
-        status = search_images(argc, argv);
     } else if (STREQ(argv[0], "untagged")) {
         status = list_untagged(argc, argv);
     } else if (STREQ(argv[0], "path")) {
