@@ -19,9 +19,16 @@ getext() {
 }
 
 populate() {
-    tagmage list ${1-} | while read id ext fname; do
+    while read id ext fname; do
         ln -s "$(tagmage path $id)" "$(printf %05d $id)-${fname}${ext}"
     done
+}
+
+populate-tag() {
+    mkdir "$1"
+    cd "$1"
+    tagmage list "$1" | populate
+    cd ..
 }
 
 setupdir() {
@@ -45,38 +52,29 @@ case $cmd in
         ;;
     list)
         setupdir
+        tagmage list "$@" | populate &
+        ;;
+    tags)
+        setupdir
 
         if [ "$#" -eq 0 ]; then
-            populate &
+            # If no tags are listed, set up every tag
+            tagmage tags | while read tag; do
+                populate-tag "$tag" &
+            done
+
+            # List untagged images for good measure.
+            mkdir ':untagged'
+            cd ':untagged'
+            tagmage untagged | populate &
         else
+            # If tags are listed, set up each listed tag
             until [ "$#" -eq 0 ]; do
-                mkdir "$1"
-                cd "$1"
-                populate "$1" &
-                cd ..
+                populate-tag "$1" &
                 shift
             done
         fi
 
-        echo $imgdir
-        ;;
-    listall)
-        setupdir
-
-        # Give every tag its own folder
-        tagmage tags | while read tag; do
-            mkdir "$tag"
-            cd "$tag"
-            populate "$tag" &
-            cd ..
-        done
-
-        # Do the same for untagged images
-        mkdir '(untagged)'
-        cd '(untagged)'
-        tagmage untagged | while read id ext fname; do
-            ln -s "$(tagmage path $id)" "$(printf %05d $id)-${fname}${ext}"
-        done
         ;;
     tag)
         image_id=$(getid "$1")
@@ -89,10 +87,11 @@ case $cmd in
         tagmage untag $image_id "$@"
         ;;
     path)
-        readlink "$1"
-        ;;
-    tags)
-        tagmage tags $(getid "$1")
+        if [ "$#" -gt 0 ]; then
+            readlink "$1"
+        else
+            echo "$imgdir"
+        fi
         ;;
     rm)
         while [ "$#" -gt 0 ]; do
