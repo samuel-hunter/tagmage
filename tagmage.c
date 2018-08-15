@@ -36,6 +36,7 @@ static void print_usage(FILE *f)
             "  add [-t TAG1,TAG2,...] IMAGES..\n"
             "  edit IMAGE TITLE\n"
             "  list [TAG]\n"
+            "  untagged\n"
             "  tag IMAGE [TAGS..]\n"
             "  untag IMAGE [TAGS..]\n"
             "  tags IMAGE\n"
@@ -45,14 +46,16 @@ static void print_usage(FILE *f)
             "Visit `man 1 tagmage` for more details.\n");
 }
 
-static int print_image(const Image *image)
+static int print_image(const Image *image, void *arg)
 {
+    UNUSED(arg);
     printf("%i %s %s\n", image->id, image->ext, image->title);
     return 0;
 }
 
-static int print_tag(const Tag *tag)
+static int print_tag(const Tag *tag, void *arg)
 {
+    UNUSED(arg);
     printf("%s\n", tag->name);
     return 0;
 }
@@ -60,11 +63,11 @@ static int print_tag(const Tag *tag)
 static int list_images(int argc, char **argv)
 {
     if (argc == 1) {
-        TAGMAGE_ASSERT(tagmage_get_images(print_image));
+        TAGMAGE_ASSERT(tagmage_get_images(print_image, NULL));
         return 0;
     }
 
-    TAGMAGE_ASSERT(tagmage_get_images_by_tag(argv[1], print_image));
+    TAGMAGE_ASSERT(tagmage_get_images_by_tag(argv[1], print_image, NULL));
 
     return 0;
 }
@@ -74,7 +77,7 @@ static int list_untagged(int argc, char **argv)
     UNUSED(argc);
     UNUSED(argv);
 
-    TAGMAGE_ASSERT(tagmage_get_untagged_images(print_image));
+    TAGMAGE_ASSERT(tagmage_get_untagged_images(print_image, NULL));
     return 0;
 }
 
@@ -290,7 +293,7 @@ int list_tags(int argc, char **argv)
     int image_id = 0;
 
     if (argc == 1) {
-        TAGMAGE_ASSERT(tagmage_get_tags(&print_tag));
+        TAGMAGE_ASSERT(tagmage_get_tags(&print_tag, NULL));
         return 0;
     }
 
@@ -299,7 +302,7 @@ int list_tags(int argc, char **argv)
         return -1;
     }
 
-    TAGMAGE_ASSERT(tagmage_get_tags_by_image(image_id, &print_tag));
+    TAGMAGE_ASSERT(tagmage_get_tags_by_image(image_id, &print_tag, NULL));
     return 0;
 }
 

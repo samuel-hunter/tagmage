@@ -51,7 +51,7 @@ static void seterr()
                "(%i) %s", sqlite3_errcode(db), sqlite3_errmsg(db));
 }
 
-static int iter_images(sqlite3_stmt *stmt, image_callback callback)
+static int iter_images(sqlite3_stmt *stmt, image_callback callback, void *arg)
 {
     int rc;
     Image image;
@@ -63,7 +63,7 @@ static int iter_images(sqlite3_stmt *stmt, image_callback callback)
                 (char*) sqlite3_column_text(stmt, 2), UTF8_MAX);
 
         // Exit early if the callback returns a nonzero status.
-        if (callback(&image)) break;
+        if (callback(&image, arg)) break;
     }
 
     if (rc != SQLITE_DONE) {
@@ -74,7 +74,7 @@ static int iter_images(sqlite3_stmt *stmt, image_callback callback)
     return 0;
 }
 
-static int iter_tags(sqlite3_stmt *stmt, tag_callback callback)
+static int iter_tags(sqlite3_stmt *stmt, tag_callback callback, void *arg)
 {
     int rc;
     Tag tag;
@@ -85,7 +85,7 @@ static int iter_tags(sqlite3_stmt *stmt, tag_callback callback)
                 (char*) sqlite3_column_text(stmt, 1), UTF8_MAX);
 
         // Exit early if the callback returns a nonzero status.
-        if (callback(&tag)) break;
+        if (callback(&tag, arg)) break;
     }
 
     if (rc != SQLITE_DONE) {
@@ -312,7 +312,7 @@ int tagmage_get_image(int image_id, Image *image)
     return status;
 }
 
-int tagmage_get_images(image_callback callback)
+int tagmage_get_images(image_callback callback, void *arg)
 {
     sqlite3_stmt *stmt = NULL;
     int rc;
@@ -320,13 +320,13 @@ int tagmage_get_images(image_callback callback)
     rc = PREPARE(stmt, "SELECT id,title,ext FROM image");
     CHECK_STATUS(rc);
 
-    rc = iter_images(stmt, callback);
+    rc = iter_images(stmt, callback, arg);
     sqlite3_finalize(stmt);
 
     return rc;
 }
 
-int tagmage_get_untagged_images(image_callback callback)
+int tagmage_get_untagged_images(image_callback callback, void *arg)
 {
     sqlite3_stmt *stmt = NULL;
     int status;
@@ -335,13 +335,13 @@ int tagmage_get_untagged_images(image_callback callback)
             "SELECT id, title, ext FROM image "
             "  WHERE id NOT IN (SELECT image FROM image_tag)");
 
-    status = iter_images(stmt, callback);
+    status = iter_images(stmt, callback, arg);
     sqlite3_finalize(stmt);
 
     return status;
 }
 
-int tagmage_get_images_by_tag(char *tag, image_callback callback)
+int tagmage_get_images_by_tag(char *tag, image_callback callback, void *arg)
 {
     sqlite3_stmt *stmt = NULL;
     int status;
@@ -354,32 +354,32 @@ int tagmage_get_images_by_tag(char *tag, image_callback callback)
 
     BIND_TEXT(stmt, ":tag", tag);
 
-    status = iter_images(stmt, callback);
+    status = iter_images(stmt, callback, arg);
     sqlite3_finalize(stmt);
 
     return status;
 }
 
-int tagmage_search_images(int *tag_ids, image_callback callback) {
+int tagmage_search_images(int *tag_ids, image_callback callback, void *arg) {
     strncpy(tagmage_err_buf, "Unsupported operation.", BUFFER_MAX);
     return -1;
 }
 
 
-int tagmage_get_tags(tag_callback callback)
+int tagmage_get_tags(tag_callback callback, void *arg)
 {
     sqlite3_stmt *stmt = NULL;
     int status;
 
     PREPARE(stmt, "SELECT id, name FROM tag");
 
-    status = iter_tags(stmt, callback);
+    status = iter_tags(stmt, callback, arg);
     sqlite3_finalize(stmt);
 
     return status;
 }
 
-int tagmage_get_tags_by_image(int image_id, tag_callback callback)
+int tagmage_get_tags_by_image(int image_id, tag_callback callback, void *arg)
 {
     sqlite3_stmt *stmt = NULL;
     int status;
@@ -390,7 +390,7 @@ int tagmage_get_tags_by_image(int image_id, tag_callback callback)
             "                WHERE image = :imageid)");
     BIND(int, stmt, ":imageid", image_id);
 
-    status = iter_tags(stmt, callback);
+    status = iter_tags(stmt, callback, arg);
     sqlite3_finalize(stmt);
 
     return status;

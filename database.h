@@ -4,8 +4,8 @@
 #include "core.h"
 
 // Return any non-zero value to exit the callback loop.
-typedef int (*image_callback)(const Image*);
-typedef int (*tag_callback)(const Tag*);
+typedef int (*image_callback)(const Image*, void*);
+typedef int (*tag_callback)(const Tag*, void*);
 
 void tagmage_warn();
 
@@ -20,12 +20,12 @@ int tagmage_remove_tag(int image_id, char *tag_name);
 int tagmage_delete_image(int image_id);
 
 int tagmage_get_image(int image_id, Image *image);
-int tagmage_get_images(image_callback callback);
-int tagmage_get_untagged_images(image_callback callback);
-int tagmage_get_images_by_tag(char *tag, image_callback callback);
-int tagmage_search_images(int *tag_ids, image_callback callback);
+int tagmage_get_images(image_callback callback, void *arg);
+int tagmage_get_untagged_images(image_callback callback, void *arg);
+int tagmage_get_images_by_tag(char *tag, image_callback callback, void *arg);
+int tagmage_search_images(int *tag_ids, image_callback callback, void *arg);
 
-int tagmage_get_tags(tag_callback callback);
-int tagmage_get_tags_by_image(int image_id, tag_callback callback);
+int tagmage_get_tags(tag_callback callback, void *arg);
+int tagmage_get_tags_by_image(int image_id, tag_callback callback, void *arg);
 
 #endif /* BACKEND_H */
