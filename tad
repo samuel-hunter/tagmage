@@ -37,8 +37,7 @@ setupdir() {
     cd $imgdir
 }
 
-# The tmdir frontend mirrors the commands in the backend; they're just
-# done differently.
+
 case $cmd in
     add)
         # This has no behavior difference to the backend.
@@ -85,13 +84,6 @@ case $cmd in
         image_id=$(getid "$1")
         shift
         tagmage untag $image_id "$@"
-        ;;
-    path)
-        if [ "$#" -gt 0 ]; then
-            readlink "$1"
-        else
-            echo "$imgdir"
-        fi
         ;;
     rm)
         while [ "$#" -gt 0 ]; do

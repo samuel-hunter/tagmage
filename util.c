@@ -35,8 +35,8 @@ int mkpath(const char *path, mode_t mode)
 int cp(const char *dst, const char *src)
 {
     char buf[4096];
-    FILE *fd_dst, *fd_src;
-    ssize_t nread;
+    FILE *fd_dst = NULL, *fd_src = NULL;
+    ssize_t nread = 0;
     int errcode = 0;
 
     fd_dst = fopen(dst, "w");

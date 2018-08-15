@@ -1,7 +1,7 @@
 include config.mk
 
 
-SRC = util.c database.c
+SRC = util.c database.c tagmage.c
 OBJ = $(SRC:.c=.o)
 HEADERS = util.h database.h
 
@@ -17,12 +17,8 @@ options:
 .c.o: $(HEADERS)
 	$(CC) $(CFLAGS) -c $<
 
-tagmage: $(OBJ) tagmage.o
+tagmage: $(OBJ)
 	$(CC) $(LDFLAGS) -o $@ $^ -rdynamic
-
-test: $(OBJ) test.o
-	$(CC) $(LDFLAGS) -o $@ $^
-	./test
 
 install: tagmage
 	mkdir -p $(MANDIR)/man1
@@ -34,4 +30,4 @@ install: tagmage
 clean:
 	rm -f tagmage test $(OBJ) tagmage.o test.o
 
-.PHONY: all options clean test
+.PHONY: all options install clean
