@@ -26,12 +26,12 @@
 static const char *db_setup_queries[] =
     {"CREATE TABLE image ("
      "  id INTEGER PRIMARY KEY,"
-     "  title VARCHAR(100) NOT NULL,"
-     "  ext VARCHAR(10) );",
+     "  title VARCHAR(" TITLE_MAX_STR ") NOT NULL,"
+     "  ext VARCHAR(" EXT_MAX_STR ") );",
 
      "CREATE TABLE tag ("
      "  id INTEGER PRIMARY KEY,"
-     "  name VARCHAR(100) UNIQUE NOT NULL );",
+     "  name VARCHAR(" TAG_MAX_STR ") UNIQUE NOT NULL );",
 
      "CREATE TABLE image_tag ("
      "  image INTEGER NOT NULL,"
@@ -58,9 +58,9 @@ static int iter_images(sqlite3_stmt *stmt, image_callback callback, void *arg)
     while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
         image.id = sqlite3_column_int(stmt, 0);
         strncpy((char*) &image.title,
-                (char*) sqlite3_column_text(stmt, 1), UTF8_MAX);
+                (char*) sqlite3_column_text(stmt, 1), TITLE_MAX);
         strncpy((char*) &image.ext,
-                (char*) sqlite3_column_text(stmt, 2), UTF8_MAX);
+                (char*) sqlite3_column_text(stmt, 2), EXT_MAX);
 
         // Exit early if the callback returns a nonzero status.
         if (callback(&image, arg)) break;
@@ -77,10 +77,10 @@ static int iter_images(sqlite3_stmt *stmt, image_callback callback, void *arg)
 static int iter_tags(sqlite3_stmt *stmt, tag_callback callback)
 {
     int rc;
-    char tag[UTF8_MAX];
+    char tag[TAG_MAX + 1];
 
     while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-        strncpy(tag, (char*) sqlite3_column_text(stmt, 1), UTF8_MAX);
+        strncpy(tag, (char*) sqlite3_column_text(stmt, 1), TAG_MAX);
 
         // Exit early if the callback returns a nonzero status.
         if (callback(tag)) break;
@@ -295,9 +295,9 @@ int tagmage_get_image(int image_id, Image *image)
         if (image) {
             image->id = image_id;
             strncpy((char*) &image->title,
-                    (char*) sqlite3_column_text(stmt, 0), UTF8_MAX);
+                    (char*) sqlite3_column_text(stmt, 0), TITLE_MAX);
             strncpy((char*) &image->ext,
-                    (char*) sqlite3_column_text(stmt, 1), UTF8_MAX);
+                    (char*) sqlite3_column_text(stmt, 1), EXT_MAX);
         }
         break;
     default:

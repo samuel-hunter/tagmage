@@ -3,15 +3,21 @@
 
 #include <limits.h>
 
-#define UTF8_MAX NAME_MAX
+#define EXT_MAX 255
+#define TITLE_MAX 255
+#define TAG_MAX 255
+
+// See database.c:db_setup_queries
+#define EXT_MAX_STR "255"
+#define TITLE_MAX_STR "255"
+#define TAG_MAX_STR "255"
 
 typedef int timestamp; // UNIX epoch
-typedef unsigned char utf8; // UTF8-encoded byte
 
 typedef struct Image {
     int id;
-    utf8 title[UTF8_MAX + 1];
-    utf8 ext[UTF8_MAX + 1];
+    unsigned char title[TITLE_MAX + 1];
+    unsigned char ext[EXT_MAX + 1];
 } Image;
 
 #endif /* CORE_H */
