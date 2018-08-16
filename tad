@@ -27,8 +27,13 @@ populate() {
 populate-tag() {
     mkdir "$1"
     cd "$1"
-    tagmage list "$1" | populate
+    tagmage list "$@" | populate
     cd ..
+
+    # Remove tag if no images exist.
+    if [ "$(ls "$1" | wc -l)" -eq 0 ]; then
+        rmdir "$1"
+    fi
 }
 
 setupdir() {
@@ -56,23 +61,14 @@ case $cmd in
     tags)
         setupdir
 
-        if [ "$#" -eq 0 ]; then
-            # If no tags are listed, set up every tag
-            tagmage tags | while read tag; do
-                populate-tag "$tag" &
-            done
+        tagmage tags | while read tag; do
+            populate-tag "$tag" "$@" &
+        done
 
-            # List untagged images for good measure.
-            mkdir ':untagged'
-            cd ':untagged'
-            tagmage untagged | populate &
-        else
-            # If tags are listed, set up each listed tag
-            until [ "$#" -eq 0 ]; do
-                populate-tag "$1" &
-                shift
-            done
-        fi
+        # List untagged images for good measure.
+        mkdir ':untagged'
+        cd ':untagged'
+        tagmage untagged | populate &
 
         ;;
     tag)
