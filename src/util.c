@@ -54,7 +54,7 @@ int cp(const char *dst, const char *src)
         size_t nwritten;
 
         while (nread > 0) {
-            nwritten = fwrite(buf, 1, sizeof buf, fd_dst);
+            nwritten = fwrite(buf, 1, MIN(sizeof buf, nread), fd_dst);
             if (nwritten >= 0) {
                 nread -= nwritten;
                 out_ptr += nwritten;

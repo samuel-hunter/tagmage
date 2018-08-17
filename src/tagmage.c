@@ -18,7 +18,7 @@
         }} while (0)
 
 #define INCOPT() do {                               \
-        if (++optind >= argc) {                      \
+        if (++optind >= argc) {                     \
             warnx("Missing operand after '%s'.",    \
                   argv[optind-1]);                  \
             return -1;                              \
@@ -137,7 +137,7 @@ static int add_image(int argc, char **argv)
     char ext_buf[NAME_MAX + 1] = {'\0'};
     char *seltok = NULL;
     char image_dest[NAME_MAX + 1] = {'\0'};
-    int image_id = 0, opt = 0;
+    int image_id = 0;
     char *tags[BUFF_MAX] = {NULL};
     size_t num_tags = 0;
     int optind;
