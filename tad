@@ -65,11 +65,12 @@ case $cmd in
             populate-tag "$tag" "$@" &
         done
 
-        # List untagged images for good measure.
-        mkdir ':untagged'
-        cd ':untagged'
-        tagmage untagged | populate &
-
+        # List untagged images if displaying all images.
+        if [ "$#" -eq 0 ]; then
+            mkdir ':untagged'
+            cd ':untagged'
+            tagmage untagged | populate &
+        fi
         ;;
     tag)
         image_id=$(getid "$1")
