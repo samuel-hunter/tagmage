@@ -15,6 +15,8 @@ options:
 	@echo "CFLAGS = $(CFLAGS)"
 	@echo "LDFLAGS = $(LDFLAGS)"
 	@echo "CC = $(CC)"
+	@echo "PREFIX = $(PREFIX)"
+	@echo "MANDIR = $(MANDIR)"
 	@echo
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.c $(HEADERS)
