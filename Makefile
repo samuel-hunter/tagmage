@@ -1,9 +1,12 @@
 include config.mk
 
+SRCDIR = src
+BUILDDIR = build
 
-SRC = util.c database.c tagmage.c
-OBJ = $(SRC:.c=.o)
-HEADERS = util.h database.h
+
+SRC = $(SRCDIR)/util.c $(SRCDIR)/database.c $(SRCDIR)/tagmage.c
+OBJ = $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%.o,$(SRC))
+HEADERS = $(SRCDIR)/util.h $(SRCDIR)/database.h
 
 all: options tagmage
 
@@ -14,8 +17,9 @@ options:
 	@echo "CC = $(CC)"
 	@echo
 
-.c.o: $(HEADERS)
-	$(CC) $(CFLAGS) -c $<
+$(BUILDDIR)/%.o: $(SRCDIR)/%.c $(HEADERS)
+	@mkdir -p $(BUILDDIR)
+	$(CC) $(CFLAGS) -o $@ -c $<
 
 tagmage: $(OBJ)
 	$(CC) $(LDFLAGS) -o $@ $^ -rdynamic
@@ -27,6 +31,6 @@ install: tagmage
 	install -m 755 tagmage tad $(PREFIXDIR)/bin/
 
 clean:
-	rm -f tagmage test $(OBJ) tagmage.o test.o
+	rm -rf $(BUILDDIR) tagmage
 
 .PHONY: all options install clean
