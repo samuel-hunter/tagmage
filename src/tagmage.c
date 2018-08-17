@@ -1,9 +1,8 @@
 #include <err.h>
 #include <errno.h>
-#include <limits.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
+
 #include "core.h"
 #include "database.h"
 #include "util.h"
@@ -12,11 +11,18 @@
 #define BUFF_MAX 4096
 
 
-#define TAGMAGE_ASSERT(EXPR) do { \
-    if ((EXPR) < 0) {             \
-        tagmage_warn();           \
-        return -1;                \
-    }} while (0)
+#define TAGMAGE_ASSERT(EXPR) do {               \
+        if ((EXPR) < 0) {                       \
+            tagmage_warn();                     \
+            return -1;                          \
+        }} while (0)
+
+#define INCOPT() do {                               \
+        if (++optind >= argc) {                      \
+            warnx("Missing operand after '%s'.",    \
+                  argv[optind-1]);                  \
+            return -1;                              \
+        }} while (0)
 
 typedef struct TagVector {
     int size;
@@ -134,11 +140,26 @@ static int add_image(int argc, char **argv)
     int image_id = 0, opt = 0;
     char *tags[BUFF_MAX] = {NULL};
     size_t num_tags = 0;
+    int optind;
 
-    while (opt = getopt(argc, argv, "t:"), opt != -1) {
-        switch (opt) {
+    for (optind = 1; optind < argc; optind++) {
+        if (argv[optind][0] != '-')
+            // Non-command option reached
+            goto optbreak;
+
+        if (argv[optind][0] == '\0') {
+            warnx("Unexpected empty argument after '%s'.",
+                  argv[optind-1]);
+            return -1;
+        }
+
+        switch (argv[optind][1]) {
+        case '-':
+            optind++;
+            goto optbreak;
         case 't':
-            seltok = strtok(optarg, ",");
+            INCOPT();
+            seltok = strtok(argv[optind], ",");
 
             // Go through the comma-separated taglist and add tags to
             // the taglist for later.
@@ -149,11 +170,14 @@ static int add_image(int argc, char **argv)
                 seltok = strtok(NULL, ",");
             }
             break;
-        case '?':
+        default:
+            warnx("Unexpected argument '%s'.",
+                  argv[optind]);
             print_usage(stderr);
-            return 1;
+            return -1;
         }
     }
+ optbreak:
 
     // Images expected here
     if (optind >= argc) {
@@ -334,27 +358,43 @@ int list_tags(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-    int opt = 0, status = 0;
+    int optind = 0, status = 0;
     char *env = NULL;
     char db_file[PATH_MAX + 1] = {0};
 
-    while (opt = getopt(argc, argv, "+hf:"), opt != -1) {
-        switch (opt) {
+    for (optind = 1; optind < argc; optind++) {
+        // Non-option reached
+        if (argv[optind][0] != '-')
+            // Non-option reached; exit loop.
+            goto optbreak;
+
+        if (argv[optind][0] == '\0')
+            errx(1, "Unexpected empty argument after '%s'.",
+                 argv[optind-1]);
+
+        switch (argv[optind][1]) {
+        case '-':
+            // --  option breaker
+            optind++;
+            goto optbreak;
         case 'h':
-            // alias for 'help' subcommand
-            print_usage(0);
-            break;
+            // -h  help
+            print_usage(stdout);
+            return 0;
         case 'f':
-            // Set custom database folder
-            strncpy(db_path, optarg, PATH_MAX);
+            // Set custom database directory
+            INCOPT(); // increase optind
+            strncpy(db_path, argv[optind], PATH_MAX);
             break;
-        case '?':
-            // Error
-            print_usage(stderr);
-            return 1;
+        default:
+            errx(1, "Unexpected argument '%s'.",
+                 argv[optind]);
             break;
         }
+
     }
+ optbreak:
+
 
     // Set-up db_path if it's not yet initialized
     if (db_path[0] == '\0') {

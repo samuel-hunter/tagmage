@@ -1,14 +1,14 @@
 #include <errno.h>
-#include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 
+#include "limits.h"
 #include "util.h"
 
 
-int mkpath(const char *path, mode_t mode)
+int mkpath(const char *path, __mode_t mode)
 {
     char curpath[PATH_MAX+1];
     int len = strlen(path);
@@ -36,7 +36,7 @@ int cp(const char *dst, const char *src)
 {
     char buf[4096];
     FILE *fd_dst = NULL, *fd_src = NULL;
-    ssize_t nread = 0;
+    size_t nread = 0;
     int errcode = 0;
 
     fd_dst = fopen(dst, "w");
@@ -51,7 +51,7 @@ int cp(const char *dst, const char *src)
 
     while (nread = fread(buf, 1, sizeof buf, fd_src), nread > 0) {
         char *out_ptr = buf;
-        ssize_t nwritten ;
+        size_t nwritten;
 
         while (nread > 0) {
             nwritten = fwrite(buf, 1, sizeof buf, fd_dst);
