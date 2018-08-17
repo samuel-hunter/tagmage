@@ -1,12 +1,21 @@
-include config.mk
+VERSION := 0.1.1
 
-SRCDIR = src
-BUILDDIR = build
+PREFIX ?= /usr/local
+MANPREFIX := $(PREFIX)/share/man
+
+CFLAGS := -Wpedantic -Werror -std=c99 -O2 `pkg-config --cflags sqlite3`
+LDFLAGS := `pkg-config --libs sqlite3`
 
 
-SRC = $(SRCDIR)/util.c $(SRCDIR)/database.c $(SRCDIR)/tagmage.c
-OBJ = $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%.o,$(SRC))
-HEADERS = $(SRCDIR)/util.h $(SRCDIR)/database.h
+SRCDIR := src
+BUILDDIR := build
+
+SRC := $(SRCDIR)/util.c $(SRCDIR)/database.c $(SRCDIR)/tagmage.c
+OBJ := $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%.o,$(SRC))
+HEADERS := $(SRCDIR)/util.h $(SRCDIR)/database.h
+
+DISTFILES := $(SRCDIR) tad tagmage.1 tad.1 Makefile LICENSE README.md
+
 
 all: options tagmage
 
@@ -16,7 +25,7 @@ options:
 	@echo "LDFLAGS = $(LDFLAGS)"
 	@echo "CC = $(CC)"
 	@echo "PREFIX = $(PREFIX)"
-	@echo "MANDIR = $(MANDIR)"
+	@echo "MANPREFIX = $(MANPREFIX)"
 	@echo
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.c $(HEADERS)
@@ -27,12 +36,26 @@ tagmage: $(OBJ)
 	$(CC) $(LDFLAGS) -o $@ $^ -rdynamic
 
 install: tagmage
-	install -m 755 -d $(MANDIR)/man1 $(PREFIXDIR)/bin
+	install -m 755 -d $(MANPREFIX)/man1 $(PREFIX)/bin
+	install -m 755 tagmage tad $(PREFIX)/bin/
 
-	install -m 644 tagmage.1 tad.1 $(MANDIR)/man1/
-	install -m 755 tagmage tad $(PREFIXDIR)/bin/
+	sed "s/@@VERSION@@/$(VERSION)/g" < tagmage.1 > $(MANPREFIX)/man1/tagmage.1
+	sed "s/@@VERSION@@/$(VERSION)/g" < tad.1 > $(MANPREFIX)/man1/tad.1
+	chmod 644 $(MANPREFIX)/man1/tagmage.1 $(MANPREFIX)/man1/tad.1
+
+
+uninstall:
+	rm -f $(MANPREFIX)/man1/tagmage.1 $(MANPREFIX)/man1/tad.1
+	rm -f $(PREFIX)/bin/tagmage $(PREFIX)/bin/tad
+
+dist:
+	mkdir -p tagmage-$(VERSION)
+	cp -r $(DISTFILES) tagmage-$(VERSION)
+	tar -cf tagmage-$(VERSION).tar tagmage-$(VERSION)
+	gzip tagmage-$(VERSION).tar
+	rm -r tagmage-$(VERSION)
 
 clean:
-	rm -rf $(BUILDDIR) tagmage
+	rm -rf $(BUILDDIR) tagmage tagmage-*.tar.gz
 
-.PHONY: all options install clean
+.PHONY: all options install uninstall dist clean
