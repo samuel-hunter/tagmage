@@ -1,4 +1,4 @@
-PREFIXDIR=$(HOME)/.local
+PREFIXDIR=/usr/local
 MANDIR=$(PREFIXDIR)/share/man
 
 CFLAGS = -Wpedantic -g -O0 `pkg-config --cflags sqlite3`
