@@ -1,0 +1,112 @@
+.TH "TAGMAGE" "1" "16 Aug 2018" "v0.1.0" "tad"
+
+.SH "NAME"
+tad - list, sort, and organize your tagmage database with the
+filesystem.
+
+.SH "SYNOPSIS"
+.B tad
+.RI [ COMMAND ]
+...
+
+.SH "DESCRIPTION"
+
+.B tad
+creates a directory in
+.RI /tmp/tad- $USER
+and populates the directory with symlinks pointing to your
+.B tagmage
+database. The rationale behind this is to remove the need to create an
+entire frontend to view the database; instead, preexisting file
+managers
+.RB "(such as " ranger ")"
+can view the directory after it has been generated, and -- with
+extensions -- enable the file manager to run
+.B tad
+under the hood. Since the main charm is only creating symlinks, other
+software can open the same images with ease.
+
+.B tad
+generates all files in
+.RI /tmp/tad- $USER .
+This can be altered by setting the
+.I $TAD_HOME
+environment variable.
+It also lists all images in the format
+.IR ${ID} - ${TITLE}${EXT} .
+
+
+.SH "COMMANDS"
+
+.PP
+.B list
+.RI [ TAGS.. ]
+.RS 4
+Symlink all images that contain the listed tags to
+.I $TAD_HOME
+as a flat directory; that is,
+.I $TAD_HOME
+will contain no child directories.
+.RE
+
+.PP
+.B tags
+.RI [ TAGS.. ]
+.RS 4
+Symlink all images that contain the listed tags to
+.I $TAD_HOME
+organized in tags, e.g. if an image has the tags \*(lqfoo\*(rq,
+\*(lqbar\*(rq, and \*(lqqux\*(rq, then the same image will have
+symlinks from
+.IR $TAD_HOME /foo,
+.IR $TAD_HOME /bar,
+and
+.IR $TAD_HOME /qux.
+Images that don't have a tag will have a symlink from
+.IR $TAD_HOME /:untagged.
+.RE
+
+.PP
+.B tag
+.I PATH TAGS..
+.RS 4
+Add
+.I TAGS
+to the image
+.I PATH
+links to.
+.RE
+
+.PP
+.B untag
+.I PATH TAGS..
+.RS 4
+Remove
+.I TAGS
+from the image
+.I PATH
+links to.
+.RE
+
+.PP
+.B rm
+.I PATH
+Remove the image
+.I PATH
+links to from the database. On success, it also deletes the symlink.
+.RE
+
+.PP
+.B edit
+.I PATH TITLE
+Change the title of the image
+.I PATH
+links to to
+.IR TITLE .
+On success, it also renames the symlink to match the new title.
+.RE
+
+
+.SH "SEE ALSO"
+
+.BR tagmage (1)
