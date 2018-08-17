@@ -44,10 +44,6 @@ setupdir() {
 
 
 case $cmd in
-    add)
-        # This has no behavior difference to the backend.
-        tagmage add "$@"
-        ;;
     edit)
         image_id=$(getid "$1")
         ext=$(getext "$1")
