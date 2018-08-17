@@ -1,7 +1,6 @@
 #!/bin/bash
 
 set -eu
-imgdir=/tmp/tad-$USER
 cmd=${1?Command expected.}
 shift
 
@@ -37,6 +36,7 @@ populate-tag() {
 }
 
 setupdir() {
+    imgdir=${TAD_HOME-/tmp/tad-$USER}
     rm -rf $imgdir
     mkdir -p $imgdir
     cd $imgdir

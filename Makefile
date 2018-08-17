@@ -21,11 +21,10 @@ tagmage: $(OBJ)
 	$(CC) $(LDFLAGS) -o $@ $^ -rdynamic
 
 install: tagmage
-	mkdir -p $(MANDIR)/man1
-	install -m 644 tagmage.1 $(MANDIR)/man1/tagmage.1
-	mkdir -p $(PREFIXDIR)/bin
-	install -m 755 tagmage $(PREFIXDIR)/bin/tagmage
-	install -m 755 tad $(PREFIXDIR)/bin/tad
+	install -m 755 -d $(MANDIR)/man1 $(PREFIXDIR)/bin
+
+	install -m 644 tagmage.1 tad.1 $(MANDIR)/man1/
+	install -m 755 tagmage tad $(PREFIXDIR)/bin/
 
 clean:
 	rm -f tagmage test $(OBJ) tagmage.o test.o
