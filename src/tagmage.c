@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <bsd/string.h>
 
 #include "core.h"
 #include "database.h"
@@ -32,6 +33,18 @@ typedef struct TagVector {
 
 static char db_path[PATH_MAX+1] = {0};
 
+
+static void estrlcpy(char *dst, const char *src, size_t size)
+{
+    if (strlcpy(dst, src, size) > size)
+        errx(1, "strlcpy: string truncated: %s", src);
+}
+
+static void estrlcat(char *dst, const char *src, size_t size)
+{
+    if (strlcat(dst, src, size) > size)
+        errx(1, "strlcat: string truncated: %s", src);
+}
 
 static void print_usage(FILE *f)
 {
@@ -384,7 +397,7 @@ int main(int argc, char **argv)
         case 'f':
             // Set custom database directory
             INCOPT(); // increase optind
-            strncpy(db_path, argv[optind], PATH_MAX);
+            estrlcpy(db_path, argv[optind], sizeof(db_path));
             break;
         default:
             errx(1, "Unexpected argument '%s'.",
@@ -400,7 +413,7 @@ int main(int argc, char **argv)
     if (db_path[0] == '\0') {
         if (env = getenv("TAGMAGE_HOME"), env) {
             // Use $TAGMAGE_SAVE as first default
-            strncpy(db_path, env, PATH_MAX);
+            estrlcpy(db_path, env, sizeof(db_path));
         } else if (env = getenv("XDG_DATA_HOME"), env) {
             // Use $XDG_DATA_HOME/tagmage as default
             snprintf(db_path, PATH_MAX,
@@ -417,8 +430,8 @@ int main(int argc, char **argv)
         err(1, "db_path");
 
     // Set up backend database
-    strncpy(db_file, db_path, PATH_MAX);
-    strncat(db_file, "/db.sqlite", PATH_MAX);
+    estrlcpy(db_file, db_path, sizeof(db_file));
+    estrlcat(db_file, "/db.sqlite", sizeof(db_file));
 
     TAGMAGE_ASSERT(tagmage_setup(db_file));
 

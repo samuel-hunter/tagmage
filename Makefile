@@ -4,7 +4,7 @@ PREFIX ?= /usr/local
 MANPREFIX := $(PREFIX)/share/man
 
 CFLAGS := -Wpedantic -Werror -std=c99 -O2 `pkg-config --cflags sqlite3`
-LDFLAGS := `pkg-config --libs sqlite3`
+LDFLAGS := `pkg-config --libs sqlite3` -lbsd
 
 
 SRCDIR := src
