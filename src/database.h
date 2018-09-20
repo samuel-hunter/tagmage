@@ -12,7 +12,7 @@ void tagmage_warn();
 int tagmage_setup(const char *db_path);
 int tagmage_cleanup();
 
-int tagmage_new_image(const char *title, const char *ext);
+int tagmage_new_image(const char *title);
 
 int tagmage_edit_title(int image_id, char *title);
 int tagmage_add_tag(int image_id, char *tag_name);

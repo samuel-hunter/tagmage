@@ -13,13 +13,9 @@ getid() {
     fi
 }
 
-getext() {
-    echo "$1" | grep -Po '\..+' || true
-}
-
 populate() {
-    while read id ext fname; do
-        ln -s "$(tagmage path $id)" "$(printf %05d $id)-${fname}${ext}"
+    while read id fname; do
+        ln -s "$(tagmage path $id)" "$(printf %05d $id)-${fname}"
     done
 }
 
@@ -46,9 +42,8 @@ setupdir() {
 case $cmd in
     edit)
         image_id=$(getid "$1")
-        ext=$(getext "$1")
         tagmage edit $image_id "$2"
-        mv "$1" "$(getid "$1" -r)-${2}${ext}"
+        mv "$1" "$(getid "$1" -r)-${2}"
         ;;
     list)
         setupdir

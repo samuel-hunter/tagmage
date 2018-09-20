@@ -70,7 +70,7 @@ static void print_usage(FILE *f)
 static int print_image(const Image *image, void *arg)
 {
     UNUSED(arg);
-    printf("%i %s %s\n", image->id, image->ext, image->title);
+    printf("%i %s\n", image->id, image->title);
     return 0;
 }
 
@@ -101,7 +101,7 @@ static int print_image_with_tags(const Image *image, void *vecptr)
         }
     }
 
-    printf("%i %s %s\n", image->id, image->ext, image->title);
+    printf("%i %s\n", image->id, image->title);
 
     return 0;
 }
@@ -138,7 +138,7 @@ static int print_path(int argc, char **argv)
 
         TAGMAGE_ASSERT(tagmage_get_image(item_id, &img));
 
-        printf("%s/%i%s\n", db_path, img.id, img.ext);
+        printf("%s/%i\n", db_path, img.id);
     }
 
     return 0;
@@ -146,8 +146,7 @@ static int print_path(int argc, char **argv)
 
 static int add_image(int argc, char **argv)
 {
-    char *path = NULL, *basename = NULL, *ext = NULL;
-    char ext_buf[NAME_MAX + 1] = {'\0'};
+    char *path = NULL, *basename = NULL;
     char *seltok = NULL;
     char image_dest[NAME_MAX + 1] = {'\0'};
     int image_id = 0;
@@ -201,31 +200,19 @@ static int add_image(int argc, char **argv)
 
     // Iterate through each image
     for (int i = optind; i < argc; i++) {
-        ext = basename = path = argv[i];
+        basename = path = argv[i];
 
         // Search for the basename.
         for (size_t i = 0; i < strlen(path); i++)
-            if (path[i] == '/') ext = basename = path + i + 1;
-
-        // Search for the file's extension.
-        for (size_t i = 0; i < strlen(basename); i++)
-            if (basename[i] == '.') ext = basename + i;
-
-        if (ext != basename) {
-            strcpy(ext_buf, ext);
-            // Add '\0' t separate the basename from the extension.
-            ext[0] = '\0';
-        }
+            if (path[i] == '/') basename = path + i + 1;
 
         // Create an image in the database early to grab the ID.
         TAGMAGE_ASSERT(image_id =
-                       tagmage_new_image(basename, ext_buf));
+                       tagmage_new_image(basename));
 
-        snprintf(image_dest, NAME_MAX, "%s/%i%s",
-                 db_path, image_id, ext_buf);
+        snprintf(image_dest, NAME_MAX, "%s/%i",
+                 db_path, image_id);
 
-        // Add the '.' back in to recover the path of the original file.
-        ext[0] = '.';
         // Copy file and handle file errors.
         switch (cp(image_dest, path)) {
         case -1: // Couldn't open the destination file.
@@ -272,7 +259,7 @@ static int rm_image(int argc, char **argv)
 
         TAGMAGE_ASSERT(tagmage_get_image(id, &img));
 
-        snprintf(path, PATH_MAX, "%s/%i%s", db_path, id, img.ext);
+        snprintf(path, PATH_MAX, "%s/%i", db_path, id);
         int status = remove(path);
         if (status != 0) {
             // I/O Error

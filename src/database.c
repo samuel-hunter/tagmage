@@ -26,8 +26,7 @@
 static const char *db_setup_queries[] =
     {"CREATE TABLE image ("
      "  id INTEGER PRIMARY KEY,"
-     "  title VARCHAR(" TITLE_MAX_STR ") NOT NULL,"
-     "  ext VARCHAR(" EXT_MAX_STR ") );",
+     "  title VARCHAR(" TITLE_MAX_STR ") NOT NULL); ",
 
      "CREATE TABLE tag ("
      "  id INTEGER PRIMARY KEY,"
@@ -59,8 +58,6 @@ static int iter_images(sqlite3_stmt *stmt, image_callback callback, void *arg)
         image.id = sqlite3_column_int(stmt, 0);
         strncpy((char*) &image.title,
                 (char*) sqlite3_column_text(stmt, 1), TITLE_MAX);
-        strncpy((char*) &image.ext,
-                (char*) sqlite3_column_text(stmt, 2), EXT_MAX);
 
         // Exit early if the callback returns a nonzero status.
         if (callback(&image, arg)) break;
@@ -173,15 +170,14 @@ int tagmage_cleanup()
 }
 
 
-int tagmage_new_image(const char *title, const char *ext)
+int tagmage_new_image(const char *title)
 {
     sqlite3_stmt *stmt = NULL;
     int rc = 0;
 
     PREPARE(stmt,
-            "INSERT INTO image (title, ext) VALUES (:title, :ext)");
+            "INSERT INTO image (title) VALUES (:title)");
     BIND_TEXT(stmt, ":title", title);
-    BIND_TEXT(stmt, ":ext", ext);
 
     rc = sqlite3_step(stmt);
     CHECK_STATUS(rc);
@@ -281,7 +277,7 @@ int tagmage_get_image(int image_id, Image *image)
     sqlite3_stmt *stmt = NULL;
     int rc, status = 0;
 
-    PREPARE(stmt, "SELECT title,ext FROM image WHERE id=:imageid");
+    PREPARE(stmt, "SELECT title FROM image WHERE id=:imageid");
     BIND(int, stmt, ":imageid", image_id);
 
     rc = sqlite3_step(stmt);
@@ -296,8 +292,6 @@ int tagmage_get_image(int image_id, Image *image)
             image->id = image_id;
             strncpy((char*) &image->title,
                     (char*) sqlite3_column_text(stmt, 0), TITLE_MAX);
-            strncpy((char*) &image->ext,
-                    (char*) sqlite3_column_text(stmt, 1), EXT_MAX);
         }
         break;
     default:
@@ -315,7 +309,7 @@ int tagmage_get_images(image_callback callback, void *arg)
     sqlite3_stmt *stmt = NULL;
     int rc;
 
-    rc = PREPARE(stmt, "SELECT id,title,ext FROM image");
+    rc = PREPARE(stmt, "SELECT id,title FROM image");
     CHECK_STATUS(rc);
 
     rc = iter_images(stmt, callback, arg);
@@ -330,7 +324,7 @@ int tagmage_get_untagged_images(image_callback callback, void *arg)
     int status;
 
     PREPARE(stmt,
-            "SELECT id, title, ext FROM image "
+            "SELECT id, title FROM image "
             "  WHERE id NOT IN (SELECT image FROM image_tag)");
 
     status = iter_images(stmt, callback, arg);
@@ -345,7 +339,7 @@ int tagmage_get_images_by_tag(char *tag, image_callback callback, void *arg)
     int status;
 
     PREPARE(stmt,
-            "SELECT id, title, ext FROM image"
+            "SELECT id, title FROM image"
             " WHERE id IN (SELECT image FROM image_tag"
             "   WHERE tag = (SELECT id FROM tag"
             "                 WHERE name=:tag))");
