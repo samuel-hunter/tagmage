@@ -48,7 +48,6 @@ static void estrlcat(char *dst, const char *src, size_t size)
 
 static void print_usage(FILE *f)
 {
-
     fprintf(f,
             "Usage: tagmage [ -f PATH ] COMMAND [ ... ]\n"
             "\n"
@@ -200,11 +199,12 @@ static int add_image(int argc, char **argv)
 
     // Iterate through each image
     for (int i = optind; i < argc; i++) {
-        basename = path = argv[i];
-
-        // Search for the basename.
-        for (size_t i = 0; i < strlen(path); i++)
-            if (path[i] == '/') basename = path + i + 1;
+        path = argv[i];
+        // Search for the basename
+        if ((basename = strrchr(path, '/')) == NULL)
+            basename = path;
+        else
+            basename++;
 
         // Create an image in the database early to grab the ID.
         TAGMAGE_ASSERT(image_id =
@@ -425,16 +425,12 @@ int main(int argc, char **argv)
     // Shift argc, argv to subcommands
     argc -= optind;
     argv += optind;
-    optind = 1; // Reset getopt
-
 
     // Sub-Commands
     if (argc == 0 || STREQ(argv[0], "help")) {
         print_usage(stdout);
-
     } else if (STREQ(argv[0], "list")) {
         status = list_images(argc, argv);
-
     } else if (STREQ(argv[0], "untagged")) {
         status = list_untagged();
 
