@@ -2,11 +2,15 @@
 
 Save, organize, and display your images via tags.
 
+**Note:** This project is still immature, so expect breaking changes
+between major versions and in the master branch!
+
 ### Table of Contents
 
 - [Installation](#installation)
 - [Usage](#usage)
 - [Quickstart](#quickstart)
+- [Using Tad](#using-tad)
 
 ### Installation
 
@@ -14,7 +18,7 @@ To install, download [the latest
 release](https://github.com/samuel-hunter/tagmage/releases). Edit `config.mk` to
 your tastes, install the required dependencies and compile:
 
-    $ sudo apt-get install libsqlite3-dev
+    $ sudo apt-get install libsqlite3-dev libbsd-dev
     $ make
     $ sudo make install
 
@@ -58,7 +62,7 @@ our new image. To get the path of where the image is located:
 Listing all the images, we see:
 
     $ tagmage list
-    1 .png a
+    1 a.png
 
 A database with one file and no tags isn't much of a database, though. Let's add
 the rest:
@@ -88,13 +92,13 @@ single image has:
 We can also list all images that only have certain tags:
 
     $ tagmage list foo
-    2 .png b
+    2 b.png
     $ tagmage list bar qux
-    3 .png c
-    4 .png d
-    5 .png e
-    6 .png f
-    7 .png g
+    3 c.png
+    4 d.png
+    5 e.png
+    6 f.png
+    7 g.png
 
 To add or remove tags to existing images:
 
@@ -109,9 +113,11 @@ To add or remove tags to existing images:
 
 To rename an existing image:
 
-    $ tagmage edit 2 animage
+    $ tagmage edit 2 an_image.png
     $ tagmage list foo
-    2 .png animage
+    2 an_image.png
+    
+### Using Tad
 
 These utilities are useful for a frontend, but not that exciting if you want to
 view your images in bulk. Let's use `tad` to create a directory full of files
@@ -130,13 +136,13 @@ By default, `tad` created a directory at `/tmp/tad-$USER`:
     00006-e.png
     00007-e.png
     $ readlink /tmp/tad-$USER/00001-a.png
-    /home/$USER/.local/share/tagmage/1.png
+    /home/$USER/.local/share/tagmage/1
 
 We can filter by tags the same way:
 
     $ tad list foo
     $ ls /tmp/tad-$USER
-    00002-animage.png
+    00002-an_image.png
     $ tad list bar qux
     $ ls /tmp/tad-$USER
     00003-c.png
@@ -148,12 +154,13 @@ We can filter by tags the same way:
 Common utilities found in `tagmage` have their own version in `tad` as well:
 
     $ tad list && cd /tmp/tad-$USER
-    $ tad edit 00002-animage.png b # The file is now renamed at this point.
+    $ tad edit 00002-an_image.png b # The file is now renamed at this point.
     $ readlink 00002-b.png
-    /home/$USER/.local/share/tagmage/2.png
+    /home/$USER/.local/share/tagmage/2
     $ tad tag 00002-b.png qux
     $ tad untag 00002-b.png qux
     $ tad rm 00003-c.png
+    $ # The symlink should be automatically removed.
     $ ls 00003-c.png
     ls: cannot access '00003-c.png': No such file or directory.
 
@@ -167,10 +174,10 @@ You are also able to list images a separate way:
     $ tree /tmp/tad-$USER
     /tmp/tad-$USER
     ├── foo
-    │   └── 00002-b.png -> /home/$USER/.local/share/tagmage/2.png
+    │   └── 00002-b.png -> /home/$USER/.local/share/tagmage/2
     ├── bar
-    │   ├── 00002-b.png -> /home/$USER/.local/share/tagmage/2.png
-    │   ├── 00003-c.png -> /home/$USER/.local/share/tagmage/3.png
+    │   ├── 00002-b.png -> /home/$USER/.local/share/tagmage/2
+    │   ├── 00003-c.png -> /home/$USER/.local/share/tagmage/3
     # ...and so on.
 
 If you call `tad tags` without any other arguments, it will also create a folder
