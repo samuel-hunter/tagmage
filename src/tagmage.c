@@ -53,7 +53,7 @@ static void print_usage(FILE *f)
             "\n"
             "  -f SAVE  - Set custom save directory.\n"
             "\n"
-            "  add [-t TAG1,TAG2,...] IMAGES..\n"
+            "  add [-t TAG1 TAG2 ... +] IMAGES..\n"
             "  edit IMAGE TITLE\n"
             "  list [TAGS..]\n"
             "  untagged\n"
@@ -146,7 +146,6 @@ static int print_path(int argc, char **argv)
 static int add_image(int argc, char **argv)
 {
     char *path = NULL, *basename = NULL;
-    char *seltok = NULL;
     char image_dest[NAME_MAX + 1] = {'\0'};
     int image_id = 0;
     char *tags[BUFF_MAX] = {NULL};
@@ -154,54 +153,54 @@ static int add_image(int argc, char **argv)
     int optind;
 
     for (optind = 1; optind < argc; optind++) {
+        // Non-option reached
         if (argv[optind][0] != '-')
-            // Non-command option reached
             goto optbreak;
 
-        if (argv[optind][0] == '\0') {
-            warnx("Unexpected empty argument after '%s'.",
-                  argv[optind-1]);
-            return -1;
-        }
+        if (argv[optind][0] == '\0')
+            errx(1, "Unexpected empty argument after '%s'.",
+                 argv[optind-1]);
 
         switch (argv[optind][1]) {
         case '-':
+            // --  option breaker
             optind++;
             goto optbreak;
         case 't':
+            // -t [tag1] [tag2] ... +   supplementary tags
             INCOPT();
-            seltok = strtok(argv[optind], ",");
-
-            // Go through the comma-separated taglist and add tags to
-            // the taglist for later.
-            while (seltok != NULL) {
-                tags[num_tags] = seltok;
-                if (++num_tags == BUFF_MAX)
-                    errx(1, "Too many tags.");
-                seltok = strtok(NULL, ",");
+            while (!STREQ(argv[optind], "+")) {
+                tags[num_tags] = argv[optind];
+                if (++num_tags == BUFF_MAX) {
+                    warnx("Too many tags after '%s'.",
+                          argv[optind-1]);
+                    return -1;
+                }
+                INCOPT();
             }
             break;
         default:
             warnx("Unexpected argument '%s'.",
-                  argv[optind]);
-            print_usage(stderr);
+                 argv[optind]);
             return -1;
         }
     }
  optbreak:
 
-    // Images expected here
-    if (optind >= argc) {
+    // Expect at least one file.
+    if (optind == argc) {
         warnx("Missing file operand.");
-        print_usage(stderr);
-        return 1;
+        return -1;
     }
 
-    // Iterate through each image
+
     for (int i = optind; i < argc; i++) {
+        // Add image
         path = argv[i];
-        // Search for the basename
-        if ((basename = strrchr(path, '/')) == NULL)
+
+        // Search for the basename.
+        basename = strrchr(path, '/');
+        if (basename == NULL)
             basename = path;
         else
             basename++;
@@ -224,12 +223,13 @@ static int add_image(int argc, char **argv)
             return -1;
         case -2: // Couldn't open the source file.
 
-            // Same as above
+            // Same as above.
             tagmage_delete_image(image_id);
             warn("%s", path);
-            return -1;
+            return 01;
         }
 
+        // Print ID of new image.
         printf("%i\n", image_id);
 
         // Add each tag to the new image.

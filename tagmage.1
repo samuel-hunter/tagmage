@@ -32,14 +32,17 @@ is set. Else, it will be set to
 
 .PP
 .B add
-.RI [ "" "-t " TAG1,TAG2,.. ]
+.RI [ "" "-t " TAG1 " " TAG2 " " ... " +" "" ]
 .I IMAGES..
 .RS 4
 Copies
 .I IMAGES
 to the save file and outputs the IDs of each image to standard output,
-delimited by a newline. If any tags are provided, they will be
-assigned to each image added.
+delimited by a newline. If the
+.I -t
+flag is provided, it accepts a series of tag names followed by a
+.IR + . All tags will be added to the image.
+
 .RE
 
 .PP

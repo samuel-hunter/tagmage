@@ -28,7 +28,7 @@ your tastes, install the required dependencies and compile:
     
       -f SAVE  - Set custom save directory.
     
-      add [-t TAG1,TAG2,...] IMAGES..
+      add [-t TAG1 TAG2 ... +] IMAGES..
       edit IMAGE TITLE
       list [TAGS..]
       untagged
@@ -67,9 +67,9 @@ Listing all the images, we see:
 A database with one file and no tags isn't much of a database, though. Let's add
 the rest:
 
-    $ tagmage add -t foo,bar b.png
+    $ tagmage add -t foo bar + b.png
     2
-    $ tagmage add -t bar,qux {c..g}.png
+    $ tagmage add -t bar qux + {c..g}.png
     3
     4
     5
