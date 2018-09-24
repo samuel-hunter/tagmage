@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <err.h>
 #include <errno.h>
 #include <stdio.h>
@@ -30,6 +31,12 @@ typedef struct TagVector {
     char **tags;
 } TagVector;
 
+// List of legal non-alphanumeric starting characters for tags.
+static const char tag_starting_char_whitelist[] = "_()";
+
+// List of banned characters for tags.
+static const char tag_char_blacklist[] = " \t\n";
+
 
 static char db_path[PATH_MAX+1] = {0};
 
@@ -44,6 +51,28 @@ static void estrlcat(char *dst, const char *src, size_t size)
 {
     if (strlcat(dst, src, size) > size)
         errx(1, "strlcat: string truncated: %s", src);
+}
+
+static int is_tag_valid(const char *tag_name)
+{
+    // Empty tags are invalid.
+    if (strlen(tag_name) == 0)
+        return 0;
+
+    // Non-alphanumeric characters outside the whitelist are invalid
+    // as a starting character. This is so that characters with
+    // special meaning at the start of an argument will not conflict
+    // with actual tag names.
+    if (!isalnum(tag_name[0]) && !strchr(tag_starting_char_whitelist, tag_name[0]))
+        return 0;
+
+    for (size_t i = 1; tag_name[i] != '\0'; i++)
+        // Return false if any character in in the blacklist.
+        if (strchr(tag_char_blacklist, tag_name[i]))
+            return 0;
+
+    // Are the checks are passed.
+    return 1;
 }
 
 static void print_usage(FILE *f)
@@ -170,7 +199,16 @@ static int add_image(int argc, char **argv)
             // -t [tag1] [tag2] ... +   supplementary tags
             INCOPT();
             while (!STREQ(argv[optind], "+")) {
+                // Double-check the tag is valid.
+                if (!is_tag_valid(argv[optind])) {
+                    warnx("Invalid tag '%s'.",
+                          argv[optind]);
+                    return -1;
+                }
+
                 tags[num_tags] = argv[optind];
+
+                // Double-check there isn't too many tags.
                 if (++num_tags == BUFF_MAX) {
                     warnx("Too many tags after '%s'.",
                           argv[optind-1]);
@@ -311,7 +349,11 @@ int tag_image(int argc, char **argv)
     }
 
     for (int i = 2; i < argc; i++) {
-        TAGMAGE_ASSERT(tagmage_add_tag(image_id, argv[i]));
+        if (is_tag_valid(argv[i])) {
+            TAGMAGE_ASSERT(tagmage_add_tag(image_id, argv[i]));
+        } else {
+            warnx("Invalid tag '%s'.", argv[i]);
+        }
     }
 
     return 0;
