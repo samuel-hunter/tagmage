@@ -1,7 +1,7 @@
 .TH "TAGMAGE" "1" "16 Aug 2018" "v@@VERSION@@" "tagmage"
 
 .SH "NAME"
-tagmage - save, organize and list images via tags.
+tagmage - save, organize and list files via tags.
 
 .SH "SYNOPSIS"
 .B tagmage
@@ -33,24 +33,24 @@ is set. Else, it will be set to
 .PP
 .B add
 .RI [ "" "-t " TAG1 " " TAG2 " " ... " +" "" ]
-.I IMAGES..
+.I FILES..
 .RS 4
 Copies
-.I IMAGES
-to the save file and outputs the IDs of each image to standard output,
+.I FILES
+to the save file and outputs the IDs of each file to standard output,
 delimited by a newline. If the
 .I -t
 flag is provided, it accepts a series of tag names followed by a
-.IR + . All tags will be added to the image.
+.IR + . All tags will be added to the file.
 
 .RE
 
 .PP
 .B edit
-.I IMAGE TITLE
+.I FILE TITLE
 .RS 4
 Changes
-.IR IMAGE 's
+.IR FILE 's
 title to
 .IR TITLE .
 .RE
@@ -59,67 +59,67 @@ title to
 .B list
 .RI [ TAGS.. ]
 .RS 4
-Lists every image in the database. If tags are provided, it will only
-list images that has every provided tag.
+Lists every file in the database. If tags are provided, it will only
+list files that has every provided tag.
 .RE
 
 .PP
 .B untagged
 .RS
-Lists all images without tags.
+Lists all files without tags.
 .RE
 
 .PP
 .B path
-.RI [ IMAGES.. ]
+.RI [ FILES.. ]
 .RS 4
 Echoes the path of the save directory to standard output. If
-.I IMAGE
-is provided, it lists the path of the image id.
+.I FILES
+is provided, it lists the path of the file id.
 .RE
 
 .PP
 .B tag
-.I IMAGE
+.I FILE
 .RI [ TAGS.. ]
 .RS 4
 Add
 .I TAGS
 to
-.IR IMAGE .
+.IR FILE .
 If a tag is already assigned to
-.IR IMAGE ,
+.IR FILE ,
 the program silently succeeds.
 .RE
 
 .PP
 .B untag
-.I IMAGE
+.I FILE
 .RI [ TAGS.. ]
 .RS 4
 Removes
 .I TAGS
 from
-.IR IMAGE .
+.IR FILE .
 If a tag was not yet assigned to
-.IR IMAGE ,
+.IR FILE ,
 the program silently succeeds.
 .RE
 
 .PP
 .B tags
-.RI [ IMAGE ]
+.RI [ FILE ]
 .RS
-Prints a list of newline-delimited tags the image has to standard
+Prints a list of newline-delimited tags the file has to standard
 output. If
-.I IMAGE
-is provided, it prints a list of tags that the image has.
+.I FILE
+is provided, it prints a list of tags that the file has.
 
 .PP
 .B rm
-.I IMAGES..
+.I FILES..
 .RS 4
-Removes every image listed from the database.
+Removes every file listed from the database.
 
 .SH "SEE ALSO"
 

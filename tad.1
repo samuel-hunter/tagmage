@@ -24,7 +24,7 @@ can view the directory after it has been generated, and -- with
 extensions -- enable the file manager to run
 .B tad
 under the hood. Since the main charm is only creating symlinks, other
-software can open the same images with ease.
+software can open the same files with ease.
 
 .B tad
 generates all files in
@@ -32,7 +32,7 @@ generates all files in
 This can be altered by setting the
 .I $TAD_HOME
 environment variable.
-It also lists all images in the format
+It also lists all files in the format
 .IR ${ID} - ${TITLE}${EXT} .
 
 
@@ -42,7 +42,7 @@ It also lists all images in the format
 .B list
 .RI [ TAGS.. ]
 .RS 4
-Symlink all images that contain the listed tags to
+Symlink all files that contain the listed tags to
 .I $TAD_HOME
 as a flat directory; that is,
 .I $TAD_HOME
@@ -53,16 +53,16 @@ will contain no child directories.
 .B tags
 .RI [ TAGS.. ]
 .RS 4
-Symlink all images that contain the listed tags to
+Symlink all files that contain the listed tags to
 .I $TAD_HOME
-organized in tags, e.g. if an image has the tags \*(lqfoo\*(rq,
-\*(lqbar\*(rq, and \*(lqqux\*(rq, then the same image will have
+organized in tags, e.g. if a file has the tags \*(lqfoo\*(rq,
+\*(lqbar\*(rq, and \*(lqqux\*(rq, then the same file will have
 symlinks from
 .IR $TAD_HOME /foo,
 .IR $TAD_HOME /bar,
 and
 .IR $TAD_HOME /qux.
-Images that don't have a tag will have a symlink from
+Files that don't have a tag will have a symlink from
 .IR $TAD_HOME /:untagged.
 .RE
 
@@ -72,7 +72,7 @@ Images that don't have a tag will have a symlink from
 .RS 4
 Add
 .I TAGS
-to the image
+to the file
 .I PATH
 links to.
 .RE
@@ -83,7 +83,7 @@ links to.
 .RS 4
 Remove
 .I TAGS
-from the image
+from the file
 .I PATH
 links to.
 .RE
@@ -91,7 +91,7 @@ links to.
 .PP
 .B rm
 .I PATH
-Remove the image
+Remove the file
 .I PATH
 links to from the database. On success, it also deletes the symlink.
 .RE
@@ -99,7 +99,7 @@ links to from the database. On success, it also deletes the symlink.
 .PP
 .B edit
 .I PATH TITLE
-Change the title of the image
+Change the title of the file
 .I PATH
 links to to
 .IR TITLE .

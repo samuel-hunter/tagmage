@@ -8,11 +8,9 @@
 #define TITLE_MAX_STR "4096"
 #define TAG_MAX_STR "4096"
 
-typedef int timestamp; // UNIX epoch
-
-typedef struct Image {
+typedef struct TMFile {
     int id;
     unsigned char title[TITLE_MAX + 1];
-} Image;
+} TMFile;
 
 #endif /* CORE_H */

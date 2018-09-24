@@ -1,6 +1,6 @@
 ## tagmage
 
-Save, organize, and display your images via tags.
+Save, organize, and list files via tags.
 
 **Note:** This project is still immature, so expect breaking changes
 between major versions and in the master branch!
@@ -28,15 +28,15 @@ your tastes, install the required dependencies and compile:
     
       -f SAVE  - Set custom save directory.
     
-      add [-t TAG1 TAG2 ... +] IMAGES..
-      edit IMAGE TITLE
+      add [-t TAG1 TAG2 ... +] FILES..
+      edit FILE TITLE
       list [TAGS..]
       untagged
-      tag IMAGE [TAGS..]
-      untag IMAGE [TAGS..]
-      tags IMAGE
-      path [IMAGES..]
-      rm IMAGES..
+      tag FILE [TAGS..]
+      untag IFLE [TAGS..]
+      tags FILE
+      path [FILES..]
+      rm FILES..
     
     Visit `man 1 tagmage` for more details.
 
@@ -44,7 +44,7 @@ The frontend utility `tad` also has its own manpage.
 
 ### Quickstart
 
-We'll be working with `tagmage` to save and manage images, and `tad` to list
+We'll be working with `tagmage` to save and manage files, and `tad` to list
 them.
 
 We have several images in `~` named `a.png`, `b.png`, ..., `g.png`. Let's add
@@ -89,7 +89,7 @@ single image has:
     bar
     qux
 
-We can also list all images that only have certain tags:
+We can also list all files that only have certain tags:
 
     $ tagmage list foo
     2 b.png
@@ -100,7 +100,7 @@ We can also list all images that only have certain tags:
     6 f.png
     7 g.png
 
-To add or remove tags to existing images:
+To add or remove tags to existing files:
 
     $ tagmage tag 2 bux
     $ tagmage tags 2
@@ -111,7 +111,7 @@ To add or remove tags to existing images:
     foo
     bar
 
-To rename an existing image:
+To rename an existing file:
 
     $ tagmage edit 2 an_image.png
     $ tagmage list foo
@@ -181,7 +181,7 @@ You are also able to list images a separate way:
     # ...and so on.
 
 If you call `tad tags` without any other arguments, it will also create a folder
-called `:untagged` that lists all images without any tags.
+called `:untagged` that lists all files without any tags.
 
 This directory tree is easier to look at with the human eye, but others may
 prefer `tad list`, or it might be easier to run a script in the simpler

@@ -82,23 +82,23 @@ static void print_usage(FILE *f)
             "\n"
             "  -f SAVE  - Set custom save directory.\n"
             "\n"
-            "  add [-t TAG1 TAG2 ... +] IMAGES..\n"
-            "  edit IMAGE TITLE\n"
+            "  add [-t TAG1 TAG2 ... +] FILES..\n"
+            "  edit FILE TITLE\n"
             "  list [TAGS..]\n"
             "  untagged\n"
-            "  tag IMAGE [TAGS..]\n"
-            "  untag IMAGE [TAGS..]\n"
-            "  tags IMAGE\n"
-            "  path [IMAGES..]\n"
-            "  rm IMAGES..\n"
+            "  tag FILE [TAGS..]\n"
+            "  untag FILE [TAGS..]\n"
+            "  tags FILE\n"
+            "  path [FILES..]\n"
+            "  rm FILES..\n"
             "\n"
             "Visit `man 1 tagmage` for more details.\n");
 }
 
-static int print_image(const Image *image, void *arg)
+static int print_file(const TMFile *file, void *arg)
 {
     UNUSED(arg);
-    printf("%i %s\n", image->id, image->title);
+    printf("%i %s\n", file->id, file->title);
     return 0;
 }
 
@@ -108,16 +108,16 @@ static int print_tag(const char *tag)
     return 0;
 }
 
-static int print_image_with_tags(const Image *image, void *vecptr)
+static int print_file_with_tags(const TMFile *file, void *vecptr)
 {
     TagVector *tagvec = vecptr;
     int status;
 
-    // Go through each tag and return early if the image doesn't have
+    // Go through each tag and return early if the file doesn't have
     // all tags.
     for (int i = 0; i < tagvec->size; i++) {
-        // Check if image has tag.
-        status = tagmage_has_tag(image->id, tagvec->tags[i]);
+        // Check if file has tag.
+        status = tagmage_has_tag(file->id, tagvec->tags[i]);
         switch (status) {
         case -1:
             // Error; report it and exit early.
@@ -129,42 +129,42 @@ static int print_image_with_tags(const Image *image, void *vecptr)
         }
     }
 
-    printf("%i %s\n", image->id, image->title);
+    printf("%i %s\n", file->id, file->title);
 
     return 0;
 }
 
-static int list_images(int argc, char **argv)
+static int list_files(int argc, char **argv)
 {
     // All remaining arguments should be tags.
     TagVector args = {.size = argc - 1, .tags = argv + 1};
-    TAGMAGE_ASSERT(tagmage_get_images(&print_image_with_tags, &args));
+    TAGMAGE_ASSERT(tagmage_get_files(&print_file_with_tags, &args));
     return 0;
 }
 
 static int list_untagged()
 {
-    TAGMAGE_ASSERT(tagmage_get_untagged_images(print_image, NULL));
+    TAGMAGE_ASSERT(tagmage_get_untagged_files(print_file, NULL));
     return 0;
 }
 
 static int print_path(int argc, char **argv)
 {
-    Image img;
+    TMFile img;
     int item_id = 0;
 
     if (argc == 1) {
-        // print Database path if no image id provided
+        // print Database path if no file id provided
         printf("%s\n", db_path);
         return 0;
     }
 
-    // Each subsequent argument is an image id
+    // Each subsequent argument is an file id
     for (int i = 1; i < argc; i++) {
         if (sscanf(argv[i], "%i", &item_id) != 1)
             errx(1, "Invalid number '%s'", argv[i]);
 
-        TAGMAGE_ASSERT(tagmage_get_image(item_id, &img));
+        TAGMAGE_ASSERT(tagmage_get_file(item_id, &img));
 
         printf("%s/%i\n", db_path, img.id);
     }
@@ -172,11 +172,11 @@ static int print_path(int argc, char **argv)
     return 0;
 }
 
-static int add_image(int argc, char **argv)
+static int add_file(int argc, char **argv)
 {
     char *path = NULL, *basename = NULL;
-    char image_dest[NAME_MAX + 1] = {'\0'};
-    int image_id = 0;
+    char file_dest[NAME_MAX + 1] = {'\0'};
+    int file_id = 0;
     char *tags[BUFF_MAX] = {NULL};
     size_t num_tags = 0;
     int optind;
@@ -233,7 +233,7 @@ static int add_image(int argc, char **argv)
 
 
     for (int i = optind; i < argc; i++) {
-        // Add image
+        // Add file
         path = argv[i];
 
         // Search for the basename.
@@ -243,46 +243,46 @@ static int add_image(int argc, char **argv)
         else
             basename++;
 
-        // Create an image in the database early to grab the ID.
-        TAGMAGE_ASSERT(image_id =
-                       tagmage_new_image(basename));
+        // Create an file in the database early to grab the ID.
+        TAGMAGE_ASSERT(file_id =
+                       tagmage_new_file(basename));
 
-        snprintf(image_dest, NAME_MAX, "%s/%i",
-                 db_path, image_id);
+        snprintf(file_dest, NAME_MAX, "%s/%i",
+                 db_path, file_id);
 
         // Copy file and handle file errors.
-        switch (cp(image_dest, path)) {
+        switch (cp(file_dest, path)) {
         case -1: // Couldn't open the destination file.
 
-            // Attempt to remove image from the database; don't
+            // Attempt to remove file from the database; don't
             // error-check, since we're already failing.
-            tagmage_delete_image(image_id);
-            warn("%s", image_dest);
+            tagmage_delete_file(file_id);
+            warn("%s", file_dest);
             return -1;
         case -2: // Couldn't open the source file.
 
             // Same as above.
-            tagmage_delete_image(image_id);
+            tagmage_delete_file(file_id);
             warn("%s", path);
             return 01;
         }
 
-        // Print ID of new image.
-        printf("%i\n", image_id);
+        // Print ID of new file.
+        printf("%i\n", file_id);
 
-        // Add each tag to the new image.
+        // Add each tag to the new file.
         for(size_t ti = 0; ti < num_tags; ti++) {
-            TAGMAGE_ASSERT(tagmage_add_tag(image_id, tags[ti]));
+            TAGMAGE_ASSERT(tagmage_add_tag(file_id, tags[ti]));
         }
     }
 
     return 0;
 }
 
-static int rm_image(int argc, char **argv)
+static int rm_file(int argc, char **argv)
 {
     int id = 0;
-    Image img;
+    TMFile img;
     char path[PATH_MAX + 1];
 
     if (argc == 1) {
@@ -295,7 +295,7 @@ static int rm_image(int argc, char **argv)
         if (sscanf(argv[i], "%i", &id) != 1)
             errx(1, "Unknown number '%s'.", argv[i]);
 
-        TAGMAGE_ASSERT(tagmage_get_image(id, &img));
+        TAGMAGE_ASSERT(tagmage_get_file(id, &img));
 
         snprintf(path, PATH_MAX, "%s/%i", db_path, id);
         int status = remove(path);
@@ -310,13 +310,13 @@ static int rm_image(int argc, char **argv)
             fprintf(stderr, "Removing reference from database anyway...\n");
         }
 
-        TAGMAGE_ASSERT(tagmage_delete_image(id));
+        TAGMAGE_ASSERT(tagmage_delete_file(id));
     }
 
     return 0;
 }
 
-static int edit_image(int argc, char **argv)
+static int edit_file(int argc, char **argv)
 {
     int id = 0;
 
@@ -334,23 +334,23 @@ static int edit_image(int argc, char **argv)
     return 0;
 }
 
-int tag_image(int argc, char **argv)
+int tag_file(int argc, char **argv)
 {
-    int image_id = 0;
+    int file_id = 0;
 
     if (argc == 1) {
-        warnx("Missing image after '%s'.", argv[0]);
+        warnx("Missing file after '%s'.", argv[0]);
         return -1;
     }
 
-    if (sscanf(argv[1], "%i", &image_id) != 1) {
+    if (sscanf(argv[1], "%i", &file_id) != 1) {
         warnx("'%s' is not a valid number.", argv[1]);
         return -1;
     }
 
     for (int i = 2; i < argc; i++) {
         if (is_tag_valid(argv[i])) {
-            TAGMAGE_ASSERT(tagmage_add_tag(image_id, argv[i]));
+            TAGMAGE_ASSERT(tagmage_add_tag(file_id, argv[i]));
         } else {
             warnx("Invalid tag '%s'.", argv[i]);
         }
@@ -359,22 +359,22 @@ int tag_image(int argc, char **argv)
     return 0;
 }
 
-int untag_image(int argc, char **argv)
+int untag_file(int argc, char **argv)
 {
-    int image_id = 0;
+    int file_id = 0;
 
     if (argc == 1) {
-        warnx("Missing image after '%s'.", argv[0]);
+        warnx("Missing file after '%s'.", argv[0]);
         return -1;
     }
 
-    if (sscanf(argv[1], "%i", &image_id) != 1) {
+    if (sscanf(argv[1], "%i", &file_id) != 1) {
         warnx("'%s' is not a valid number.", argv[1]);
         return -1;
     }
 
     for (int i = 2; i < argc; i++) {
-        TAGMAGE_ASSERT(tagmage_remove_tag(image_id, argv[i]));
+        TAGMAGE_ASSERT(tagmage_remove_tag(file_id, argv[i]));
     }
 
     return 0;
@@ -382,19 +382,19 @@ int untag_image(int argc, char **argv)
 
 int list_tags(int argc, char **argv)
 {
-    int image_id = 0;
+    int file_id = 0;
 
     if (argc == 1) {
         TAGMAGE_ASSERT(tagmage_get_tags(&print_tag));
         return 0;
     }
 
-    if (sscanf(argv[1], "%i", &image_id) != 1) {
+    if (sscanf(argv[1], "%i", &file_id) != 1) {
         warnx("'%s' is not a valid number.", argv[1]);
         return -1;
     }
 
-    TAGMAGE_ASSERT(tagmage_get_tags_by_image(image_id, &print_tag));
+    TAGMAGE_ASSERT(tagmage_get_tags_by_file(file_id, &print_tag));
     return 0;
 }
 
@@ -472,7 +472,7 @@ int main(int argc, char **argv)
     if (argc == 0 || STREQ(argv[0], "help")) {
         print_usage(stdout);
     } else if (STREQ(argv[0], "list")) {
-        status = list_images(argc, argv);
+        status = list_files(argc, argv);
     } else if (STREQ(argv[0], "untagged")) {
         status = list_untagged();
 
@@ -480,22 +480,22 @@ int main(int argc, char **argv)
         status = print_path(argc, argv);
 
     } else if (STREQ(argv[0], "add")) {
-        status = add_image(argc, argv);
+        status = add_file(argc, argv);
 
     } else if (STREQ(argv[0], "rm")) {
-        status = rm_image(argc, argv);
+        status = rm_file(argc, argv);
 
     } else if (STREQ(argv[0], "tag")) {
-        status = tag_image(argc, argv);
+        status = tag_file(argc, argv);
 
     } else if (STREQ(argv[0], "untag")) {
-        status = untag_image(argc, argv);
+        status = untag_file(argc, argv);
 
     } else if (STREQ(argv[0], "tags")) {
         status = list_tags(argc, argv);
 
     } else if (STREQ(argv[0], "edit")) {
-        status = edit_image(argc, argv);
+        status = edit_file(argc, argv);
 
     } else {
         // Unknown command

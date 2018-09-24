@@ -50,17 +50,17 @@ static void seterr()
                "(%i) %s", sqlite3_errcode(db), sqlite3_errmsg(db));
 }
 
-static int iter_images(sqlite3_stmt *stmt, image_callback callback, void *arg)
+static int iter_files(sqlite3_stmt *stmt, file_callback callback, void *arg)
 {
     int rc;
-    Image image;
+    TMFile file;
     while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
-        image.id = sqlite3_column_int(stmt, 0);
-        strncpy((char*) &image.title,
+        file.id = sqlite3_column_int(stmt, 0);
+        strncpy((char*) &file.title,
                 (char*) sqlite3_column_text(stmt, 1), TITLE_MAX);
 
         // Exit early if the callback returns a nonzero status.
-        if (callback(&image, arg)) break;
+        if (callback(&file, arg)) break;
     }
 
     if (rc != SQLITE_DONE) {
@@ -170,7 +170,7 @@ int tagmage_cleanup()
 }
 
 
-int tagmage_new_image(const char *title)
+int tagmage_new_file(const char *title)
 {
     sqlite3_stmt *stmt = NULL;
     int rc = 0;
@@ -187,19 +187,19 @@ int tagmage_new_image(const char *title)
     return sqlite3_last_insert_rowid(db);
 }
 
-int tagmage_edit_title(int image_id, char *title)
+int tagmage_edit_title(int file_id, char *title)
 {
     sqlite3_stmt *stmt = NULL;
 
     // Double-check it exists.
-    if (tagmage_get_image(image_id, NULL) < 0)
+    if (tagmage_get_file(file_id, NULL) < 0)
         return -1;
 
     PREPARE(stmt,
-            "UPDATE image SET title=:newtitle WHERE id=:imageid");
+            "UPDATE image SET title=:newtitle WHERE id=:fileid");
 
     BIND_TEXT(stmt, ":newtitle", title);
-    BIND(int, stmt, ":imageid", image_id);
+    BIND(int, stmt, ":fileid", file_id);
 
     int rc = sqlite3_step(stmt);
     CHECK_STATUS(rc);
@@ -209,7 +209,7 @@ int tagmage_edit_title(int image_id, char *title)
 }
 
 
-int tagmage_add_tag(int image_id, char *tag_name)
+int tagmage_add_tag(int file_id, char *tag_name)
 {
     sqlite3_stmt *stmt;
     int rc;
@@ -226,7 +226,7 @@ int tagmage_add_tag(int image_id, char *tag_name)
             "INSERT INTO image_tag (image, tag) VALUES (:img, "
             "  (SELECT id FROM tag WHERE name=:tag))");
 
-    BIND(int, stmt, ":img", image_id);
+    BIND(int, stmt, ":img", file_id);
     BIND_TEXT(stmt, ":tag", tag_name);
 
     rc = sqlite3_step(stmt);
@@ -236,17 +236,17 @@ int tagmage_add_tag(int image_id, char *tag_name)
     return 0;
 }
 
-int tagmage_remove_tag(int image_id, char *tag_name)
+int tagmage_remove_tag(int file_id, char *tag_name)
 {
     sqlite3_stmt *stmt;
     int rc;
 
     rc = PREPARE(stmt,
                  "DELETE FROM image_tag"
-                 " WHERE image=:img"
+                 " WHERE image=:file"
                  " AND tag=(SELECT id FROM tag WHERE name=:tag)");
     CHECK_STATUS(rc);
-    BIND(int, stmt, ":img", image_id);
+    BIND(int, stmt, ":file", file_id);
     BIND_TEXT(stmt, ":tag", tag_name);
 
     rc = sqlite3_step(stmt);
@@ -256,13 +256,13 @@ int tagmage_remove_tag(int image_id, char *tag_name)
     return cleanup_tags();
 }
 
-int tagmage_delete_image(int image_id)
+int tagmage_delete_file(int file_id)
 {
     sqlite3_stmt *stmt = NULL;
     int rc;
 
-    PREPARE(stmt, "DELETE FROM image WHERE id=:imageid");
-    BIND(int, stmt, ":imageid", image_id);
+    PREPARE(stmt, "DELETE FROM image WHERE id=:fileid");
+    BIND(int, stmt, ":fileid", file_id);
 
     rc = sqlite3_step(stmt);
     CHECK_STATUS(rc);
@@ -272,25 +272,25 @@ int tagmage_delete_image(int image_id)
 }
 
 
-int tagmage_get_image(int image_id, Image *image)
+int tagmage_get_file(int file_id, TMFile *file)
 {
     sqlite3_stmt *stmt = NULL;
     int rc, status = 0;
 
-    PREPARE(stmt, "SELECT title FROM image WHERE id=:imageid");
-    BIND(int, stmt, ":imageid", image_id);
+    PREPARE(stmt, "SELECT title FROM image WHERE id=:file");
+    BIND(int, stmt, ":file", file_id);
 
     rc = sqlite3_step(stmt);
 
     switch (rc) {
     case SQLITE_DONE:
-        strncpy(tagmage_err_buf, "Image doesn't exist.", BUFFER_MAX);
+        strncpy(tagmage_err_buf, "File doesn't exist.", BUFFER_MAX);
         status = -1;
         break;
     case SQLITE_ROW:
-        if (image) {
-            image->id = image_id;
-            strncpy((char*) &image->title,
+        if (file) {
+            file->id = file_id;
+            strncpy((char*) &file->title,
                     (char*) sqlite3_column_text(stmt, 0), TITLE_MAX);
         }
         break;
@@ -304,7 +304,7 @@ int tagmage_get_image(int image_id, Image *image)
     return status;
 }
 
-int tagmage_get_images(image_callback callback, void *arg)
+int tagmage_get_files(file_callback callback, void *arg)
 {
     sqlite3_stmt *stmt = NULL;
     int rc;
@@ -312,13 +312,13 @@ int tagmage_get_images(image_callback callback, void *arg)
     rc = PREPARE(stmt, "SELECT id,title FROM image");
     CHECK_STATUS(rc);
 
-    rc = iter_images(stmt, callback, arg);
+    rc = iter_files(stmt, callback, arg);
     sqlite3_finalize(stmt);
 
     return rc;
 }
 
-int tagmage_get_untagged_images(image_callback callback, void *arg)
+int tagmage_get_untagged_files(file_callback callback, void *arg)
 {
     sqlite3_stmt *stmt = NULL;
     int status;
@@ -327,13 +327,13 @@ int tagmage_get_untagged_images(image_callback callback, void *arg)
             "SELECT id, title FROM image "
             "  WHERE id NOT IN (SELECT image FROM image_tag)");
 
-    status = iter_images(stmt, callback, arg);
+    status = iter_files(stmt, callback, arg);
     sqlite3_finalize(stmt);
 
     return status;
 }
 
-int tagmage_get_images_by_tag(char *tag, image_callback callback, void *arg)
+int tagmage_get_files_by_tag(char *tag, file_callback callback, void *arg)
 {
     sqlite3_stmt *stmt = NULL;
     int status;
@@ -346,22 +346,22 @@ int tagmage_get_images_by_tag(char *tag, image_callback callback, void *arg)
 
     BIND_TEXT(stmt, ":tag", tag);
 
-    status = iter_images(stmt, callback, arg);
+    status = iter_files(stmt, callback, arg);
     sqlite3_finalize(stmt);
 
     return status;
 }
 
 
-int tagmage_has_tag(int image_id, char *tag_name) {
+int tagmage_has_tag(int file_id, char *tag_name) {
     sqlite3_stmt *stmt = NULL;
     int rc;
 
     rc = PREPARE(stmt,
             "SELECT image FROM image_tag"
-            " WHERE image=:image"
+            " WHERE image=:file"
             " AND tag=(SELECT id FROM tag WHERE name=:tag)");
-    BIND(int, stmt, ":image", image_id);
+    BIND(int, stmt, ":file", file_id);
     rc = BIND_TEXT(stmt, ":tag", tag_name);
 
     rc = sqlite3_step(stmt);
@@ -391,7 +391,7 @@ int tagmage_get_tags(tag_callback callback)
     return status;
 }
 
-int tagmage_get_tags_by_image(int image_id, tag_callback callback)
+int tagmage_get_tags_by_file(int file_id, tag_callback callback)
 {
     sqlite3_stmt *stmt = NULL;
     int status;
@@ -399,8 +399,8 @@ int tagmage_get_tags_by_image(int image_id, tag_callback callback)
     PREPARE(stmt,
             "SELECT id, name FROM tag"
             " WHERE id IN (SELECT tag FROM image_tag"
-            "                WHERE image = :imageid)");
-    BIND(int, stmt, ":imageid", image_id);
+            "                WHERE image=:file)");
+    BIND(int, stmt, ":file", file_id);
 
     status = iter_tags(stmt, callback);
     sqlite3_finalize(stmt);

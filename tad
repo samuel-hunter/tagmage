@@ -25,24 +25,24 @@ populate-tag() {
     tagmage list "$@" | populate
     cd ..
 
-    # Remove tag if no images exist.
+    # Remove tag if no files exist.
     if [ "$(ls "$1" | wc -l)" -eq 0 ]; then
         rmdir "$1"
     fi
 }
 
 setupdir() {
-    imgdir=${TAD_HOME-/tmp/tad-$USER}
-    rm -rf $imgdir
-    mkdir -p $imgdir
-    cd $imgdir
+    filedir=${TAD_HOME-/tmp/tad-$USER}
+    rm -rf $filedir
+    mkdir -p $filedir
+    cd $filedir
 }
 
 
 case $cmd in
     edit)
-        image_id=$(getid "$1")
-        tagmage edit $image_id "$2"
+        file_id=$(getid "$1")
+        tagmage edit $file_id "$2"
         mv "$1" "$(getid "$1" -r)-${2}"
         ;;
     list)
@@ -56,7 +56,7 @@ case $cmd in
             populate-tag "$tag" "$@" &
         done
 
-        # List untagged images if displaying all images.
+        # List untagged files if displaying all files.
         if [ "$#" -eq 0 ]; then
             mkdir ':untagged'
             cd ':untagged'
@@ -64,14 +64,14 @@ case $cmd in
         fi
         ;;
     tag)
-        image_id=$(getid "$1")
+        file_id=$(getid "$1")
         shift
-        tagmage tag $image_id "$@"
+        tagmage tag $file_id "$@"
         ;;
     untag)
-        image_id=$(getid "$1")
+        file_id=$(getid "$1")
         shift
-        tagmage untag $image_id "$@"
+        tagmage untag $file_id "$@"
         ;;
     rm)
         while [ "$#" -gt 0 ]; do
