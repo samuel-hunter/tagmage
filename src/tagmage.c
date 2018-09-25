@@ -8,6 +8,7 @@
 #include "core.h"
 #include "database.h"
 #include "util.h"
+#include "tags.h"
 
 #define APP_NAME "tagmage"
 #define BUFF_MAX 4096
@@ -26,17 +27,6 @@
             return -1;                              \
         }} while (0)
 
-typedef struct TagVector {
-    int size;
-    char **tags;
-} TagVector;
-
-// List of legal non-alphanumeric starting characters for tags.
-static const char tag_starting_char_whitelist[] = "_()";
-
-// List of banned characters for tags.
-static const char tag_char_blacklist[] = " \t\n";
-
 
 static char db_path[PATH_MAX+1] = {0};
 
@@ -51,28 +41,6 @@ static void estrlcat(char *dst, const char *src, size_t size)
 {
     if (strlcat(dst, src, size) > size)
         errx(1, "strlcat: string truncated: %s", src);
-}
-
-static int is_tag_valid(const char *tag_name)
-{
-    // Empty tags are invalid.
-    if (strlen(tag_name) == 0)
-        return 0;
-
-    // Non-alphanumeric characters outside the whitelist are invalid
-    // as a starting character. This is so that characters with
-    // special meaning at the start of an argument will not conflict
-    // with actual tag names.
-    if (!isalnum(tag_name[0]) && !strchr(tag_starting_char_whitelist, tag_name[0]))
-        return 0;
-
-    for (size_t i = 1; tag_name[i] != '\0'; i++)
-        // Return false if any character in in the blacklist.
-        if (strchr(tag_char_blacklist, tag_name[i]))
-            return 0;
-
-    // Are the checks are passed.
-    return 1;
 }
 
 static void print_usage(FILE *f)
@@ -108,28 +76,12 @@ static int print_tag(const char *tag)
     return 0;
 }
 
-static int print_file_with_tags(const TMFile *file, void *vecptr)
+static int print_file_filtered(const TMFile *file, void *vecptr)
 {
     TagVector *tagvec = vecptr;
-    int status;
 
-    // Go through each tag and return early if the file doesn't have
-    // all tags.
-    for (int i = 0; i < tagvec->size; i++) {
-        // Check if file has tag.
-        status = tagmage_has_tag(file->id, tagvec->tags[i]);
-        switch (status) {
-        case -1:
-            // Error; report it and exit early.
-            tagmage_warn();
-            return -1;
-        case 0:
-            // Tag doesn't exist; break out.
-            return 0;
-        }
-    }
-
-    printf("%i %s\n", file->id, file->title);
+    if (tagmage_file_has_tags(file, tagvec))
+        printf("%i %s\n", file->id, file->title);
 
     return 0;
 }
@@ -138,7 +90,14 @@ static int list_files(int argc, char **argv)
 {
     // All remaining arguments should be tags.
     TagVector args = {.size = argc - 1, .tags = argv + 1};
-    TAGMAGE_ASSERT(tagmage_get_files(&print_file_with_tags, &args));
+
+    // Sanity check on all the tags before starting.
+    for (int i = 1; i < argc; i++) {
+        if (!tagmage_is_valid_tag(argv[i], 0))
+            errx(1, "Invalid tag '%s'.", argv[i]);
+    }
+
+    TAGMAGE_ASSERT(tagmage_get_files(&print_file_filtered, &args));
     return 0;
 }
 
@@ -200,7 +159,7 @@ static int add_file(int argc, char **argv)
             INCOPT();
             while (!STREQ(argv[optind], "+")) {
                 // Double-check the tag is valid.
-                if (!is_tag_valid(argv[optind])) {
+                if (!tagmage_is_valid_tag(argv[optind], 1)) {
                     warnx("Invalid tag '%s'.",
                           argv[optind]);
                     return -1;
@@ -349,7 +308,7 @@ int tag_file(int argc, char **argv)
     }
 
     for (int i = 2; i < argc; i++) {
-        if (is_tag_valid(argv[i])) {
+        if (tagmage_is_valid_tag(argv[i], 1)) {
             TAGMAGE_ASSERT(tagmage_add_tag(file_id, argv[i]));
         } else {
             warnx("Invalid tag '%s'.", argv[i]);
