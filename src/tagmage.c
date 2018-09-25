@@ -1,9 +1,9 @@
-#include <ctype.h>
 #include <err.h>
 #include <errno.h>
 #include <stdio.h>
-#include <string.h>
+#include <limits.h>
 #include <bsd/string.h>
+#include <bsd/inttypes.h>
 
 #include "core.h"
 #include "database.h"
@@ -45,6 +45,17 @@ static void esnprintf(char *str, size_t size, const char *format, ...)
 
     if ((size_t)vsnprintf(str, size, format, ap) >= size)
         errx(1, "snprintf: string truncated: %s", str);
+}
+
+static int estrtoid(const char *str)
+{
+    int rstatus = 0, id = 0;
+
+    id = (int) strtoi(str, NULL, 0, 1, INT_MAX, &rstatus);
+    if (rstatus)
+        errx(1, "Failed to convert to id: '%s'.", str);
+
+    return id;
 }
 
 static void print_usage(int status)
@@ -111,8 +122,7 @@ static void print_path(int argc, char **argv)
 
     // Each subsequent argument is an file id
     for (int i = 1; i < argc; i++) {
-        if (sscanf(argv[i], "%i", &item_id) != 1)
-            errx(1, "Invalid number '%s'", argv[i]);
+        item_id = estrtoid(argv[i]);
 
         TAGMAGE_ASSERT(tmdb_get_file(item_id, &img));
 
@@ -230,9 +240,7 @@ static void rm_file(int argc, char **argv)
     }
 
     for (int i = 1; i < argc; i++) {
-        if (sscanf(argv[i], "%i", &id) != 1)
-            errx(1, "Unknown number '%s'.", argv[i]);
-
+        id = estrtoid(argv[i]);
         TAGMAGE_ASSERT(tmdb_get_file(id, &img));
 
         esnprintf(path, PATH_MAX, "%s/%i", db_path, id);
@@ -261,8 +269,7 @@ static void edit_file(int argc, char **argv)
         print_usage(1);
     }
 
-    if (sscanf(argv[1], "%i", &id) != 1)
-        errx(1, "'%s' is not a valid number.", argv[1]);
+    id = estrtoid(argv[1]);
 
     TAGMAGE_ASSERT(tmdb_edit_title(id, argv[2]));
 }
@@ -274,8 +281,7 @@ static void tag_file(int argc, char **argv)
     if (argc == 1)
         errx(1, "Missing file after '%s'.", argv[0]);
 
-    if (sscanf(argv[1], "%i", &file_id) != 1)
-        errx(1, "'%s' is not a valid number.", argv[1]);
+    file_id = estrtoid(argv[1]);
 
     for (int i = 2; i < argc; i++) {
         if (tagmage_is_valid_tag(argv[i], 1)) {
@@ -293,8 +299,7 @@ static void untag_file(int argc, char **argv)
     if (argc == 1)
         errx(1, "Missing file after '%s'.", argv[0]);
 
-    if (sscanf(argv[1], "%i", &file_id) != 1)
-        errx(1, "'%s' is not a valid number.", argv[1]);
+    file_id = estrtoid(argv[1]);
 
     for (int i = 2; i < argc; i++) {
         TAGMAGE_ASSERT(tmdb_remove_tag(file_id, argv[i]));
@@ -310,8 +315,7 @@ static void list_tags(int argc, char **argv)
         return;
     }
 
-    if (sscanf(argv[1], "%i", &file_id) != 1)
-        errx(1, "'%s' is not a valid number.", argv[1]);
+    file_id = estrtoid(argv[1]);
 
     TAGMAGE_ASSERT(tmdb_get_tags_by_file(file_id, &print_tag));
 }
