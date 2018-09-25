@@ -7,7 +7,7 @@
 typedef int (*file_callback)(const TMFile*, void*);
 typedef int (*tag_callback)(const char*);
 
-void tmdb_warn();
+void tmdb_error();
 
 int tmdb_setup(const char *db_path);
 int tmdb_cleanup();

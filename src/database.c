@@ -103,9 +103,9 @@ static int cleanup_tags()
 }
 
 
-void tmdb_warn()
+void tmdb_error()
 {
-    warnx("%s", tagmage_err_buf);
+    errx(1, "%s", tagmage_err_buf);
 }
 
 int tmdb_setup(const char *db_path)
@@ -192,7 +192,7 @@ int tmdb_edit_title(int file_id, const char *title)
     sqlite3_stmt *stmt = NULL;
 
     // Double-check it exists.
-    if (tagmage_get_file(file_id, NULL) < 0)
+    if (tmdb_get_file(file_id, NULL) < 0)
         return -1;
 
     PREPARE(stmt,

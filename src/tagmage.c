@@ -13,19 +13,14 @@
 #define APP_NAME "tagmage"
 #define BUFF_MAX 4096
 
+#define TAGMAGE_ASSERT(EXPR) \
+    if ((EXPR) < 0)          \
+        tmdb_error();
 
-#define TAGMAGE_ASSERT(EXPR) do {               \
-        if ((EXPR) < 0) {                       \
-            tmdb_warn();                        \
-            return -1;                          \
-        }} while (0)
-
-#define INCOPT() do {                               \
-        if (++optind >= argc) {                     \
-            warnx("Missing operand after '%s'.",    \
-                  argv[optind-1]);                  \
-            return -1;                              \
-        }} while (0)
+#define INCOPT()                               \
+    if (++optind >= argc)                      \
+        errx(1, "Missing operand after '%s'.", \
+             argv[optind-1])
 
 
 static char db_path[PATH_MAX+1] = {0};
@@ -43,9 +38,18 @@ static void estrlcat(char *dst, const char *src, size_t size)
         errx(1, "strlcat: string truncated: %s", src);
 }
 
-static void print_usage(FILE *f)
+static void esnprintf(char *str, size_t size, const char *format, ...)
 {
-    fprintf(f,
+    va_list ap;
+    va_start(ap, format);
+
+    if ((size_t)vsnprintf(str, size, format, ap) >= size)
+        errx(1, "snprintf: string truncated: %s", str);
+}
+
+static void print_usage(int status)
+{
+    fprintf(status ? stderr : stdout,
             "Usage: tagmage [ -f PATH ] COMMAND [ ... ]\n"
             "\n"
             "  -f SAVE  - Set custom save directory.\n"
@@ -60,6 +64,8 @@ static void print_usage(FILE *f)
             "  rm FILES..\n"
             "\n"
             "Visit `man 1 tagmage` for more details.\n");
+
+    exit(status);
 }
 
 static int print_tag(const char *tag)
@@ -78,7 +84,7 @@ static int print_file_filtered(const TMFile *file, void *vecptr)
     return 0;
 }
 
-static int list_files(int argc, char **argv)
+static void list_files(int argc, char **argv)
 {
     // All remaining arguments should be tags.
     TagVector args = {.size = argc - 1, .tags = argv + 1};
@@ -90,10 +96,9 @@ static int list_files(int argc, char **argv)
     }
 
     TAGMAGE_ASSERT(tmdb_get_files(&print_file_filtered, &args));
-    return 0;
 }
 
-static int print_path(int argc, char **argv)
+static void print_path(int argc, char **argv)
 {
     TMFile img;
     int item_id = 0;
@@ -101,7 +106,7 @@ static int print_path(int argc, char **argv)
     if (argc == 1) {
         // print Database path if no file id provided
         printf("%s\n", db_path);
-        return 0;
+        return;
     }
 
     // Each subsequent argument is an file id
@@ -113,11 +118,9 @@ static int print_path(int argc, char **argv)
 
         printf("%s/%i\n", db_path, img.id);
     }
-
-    return 0;
 }
 
-static int add_file(int argc, char **argv)
+static void add_file(int argc, char **argv)
 {
     char *path = NULL, *basename = NULL;
     char file_dest[NAME_MAX + 1] = {'\0'};
@@ -146,35 +149,30 @@ static int add_file(int argc, char **argv)
             while (!STREQ(argv[optind], "+")) {
                 // Double-check the tag is valid.
                 if (!tagmage_is_valid_tag(argv[optind], 1)) {
-                    warnx("Invalid tag '%s'.",
-                          argv[optind]);
-                    return -1;
+                    errx(1, "Invalid tag '%s'.",
+                         argv[optind]);
                 }
 
                 tags[num_tags] = argv[optind];
 
                 // Double-check there isn't too many tags.
                 if (++num_tags == BUFF_MAX) {
-                    warnx("Too many tags after '%s'.",
-                          argv[optind-1]);
-                    return -1;
+                    errx(1, "Too many tags after '%s'.",
+                         argv[optind-1]);
                 }
                 INCOPT();
             }
             break;
         default:
-            warnx("Unexpected argument '%s'.",
+            errx(1, "Unexpected argument '%s'.",
                  argv[optind]);
-            return -1;
         }
     }
  optbreak:
 
     // Expect at least one file.
-    if (optind == argc) {
-        warnx("Missing file operand.");
-        return -1;
-    }
+    if (optind == argc)
+        errx(1, "Missing file operand.");
 
 
     for (int i = optind; i < argc; i++) {
@@ -192,8 +190,8 @@ static int add_file(int argc, char **argv)
         TAGMAGE_ASSERT(file_id =
                        tmdb_new_file(basename));
 
-        snprintf(file_dest, NAME_MAX, "%s/%i",
-                 db_path, file_id);
+        esnprintf(file_dest, NAME_MAX, "%s/%i",
+                  db_path, file_id);
 
         // Copy file and handle file errors.
         switch (cp(file_dest, path)) {
@@ -202,14 +200,12 @@ static int add_file(int argc, char **argv)
             // Attempt to remove file from the database; don't
             // error-check, since we're already failing.
             tmdb_delete_file(file_id);
-            warn("%s", file_dest);
-            return -1;
+            err(1, "%s", file_dest);
         case -2: // Couldn't open the source file.
 
             // Same as above.
             tmdb_delete_file(file_id);
-            warn("%s", path);
-            return 01;
+            err(1, "%s", path);
         }
 
         // Print ID of new file.
@@ -220,11 +216,9 @@ static int add_file(int argc, char **argv)
             TAGMAGE_ASSERT(tmdb_add_tag(file_id, tags[ti]));
         }
     }
-
-    return 0;
 }
 
-static int rm_file(int argc, char **argv)
+static void rm_file(int argc, char **argv)
 {
     int id = 0;
     TMFile img;
@@ -232,8 +226,7 @@ static int rm_file(int argc, char **argv)
 
     if (argc == 1) {
         warnx("Missing file operand.\n");
-        print_usage(stderr);
-        return 1;
+        print_usage(1);
     }
 
     for (int i = 1; i < argc; i++) {
@@ -242,14 +235,14 @@ static int rm_file(int argc, char **argv)
 
         TAGMAGE_ASSERT(tmdb_get_file(id, &img));
 
-        snprintf(path, PATH_MAX, "%s/%i", db_path, id);
+        esnprintf(path, PATH_MAX, "%s/%i", db_path, id);
         int status = remove(path);
         if (status != 0) {
             // I/O Error
             warn("%s", path);
 
             if (status != ENOENT)
-                return -1;
+                return;
 
             // File doesn't exist; we can recover
             fprintf(stderr, "Removing reference from database anyway...\n");
@@ -257,95 +250,75 @@ static int rm_file(int argc, char **argv)
 
         TAGMAGE_ASSERT(tmdb_delete_file(id));
     }
-
-    return 0;
 }
 
-static int edit_file(int argc, char **argv)
+static void edit_file(int argc, char **argv)
 {
     int id = 0;
 
     if (argc < 3) {
         fprintf(stderr, "Not enough arguments.\n");
-        print_usage(stderr);
-        return -1;
+        print_usage(1);
     }
 
     if (sscanf(argv[1], "%i", &id) != 1)
         errx(1, "'%s' is not a valid number.", argv[1]);
 
     TAGMAGE_ASSERT(tmdb_edit_title(id, argv[2]));
-
-    return 0;
 }
 
-int tag_file(int argc, char **argv)
+static void tag_file(int argc, char **argv)
 {
     int file_id = 0;
 
-    if (argc == 1) {
-        warnx("Missing file after '%s'.", argv[0]);
-        return -1;
-    }
+    if (argc == 1)
+        errx(1, "Missing file after '%s'.", argv[0]);
 
-    if (sscanf(argv[1], "%i", &file_id) != 1) {
-        warnx("'%s' is not a valid number.", argv[1]);
-        return -1;
-    }
+    if (sscanf(argv[1], "%i", &file_id) != 1)
+        errx(1, "'%s' is not a valid number.", argv[1]);
 
     for (int i = 2; i < argc; i++) {
         if (tagmage_is_valid_tag(argv[i], 1)) {
             TAGMAGE_ASSERT(tmdb_add_tag(file_id, argv[i]));
         } else {
-            warnx("Invalid tag '%s'.", argv[i]);
+            errx(1, "Invalid tag '%s'.", argv[i]);
         }
     }
-
-    return 0;
 }
 
-int untag_file(int argc, char **argv)
+static void untag_file(int argc, char **argv)
 {
     int file_id = 0;
 
-    if (argc == 1) {
-        warnx("Missing file after '%s'.", argv[0]);
-        return -1;
-    }
+    if (argc == 1)
+        errx(1, "Missing file after '%s'.", argv[0]);
 
-    if (sscanf(argv[1], "%i", &file_id) != 1) {
-        warnx("'%s' is not a valid number.", argv[1]);
-        return -1;
-    }
+    if (sscanf(argv[1], "%i", &file_id) != 1)
+        errx(1, "'%s' is not a valid number.", argv[1]);
 
     for (int i = 2; i < argc; i++) {
         TAGMAGE_ASSERT(tmdb_remove_tag(file_id, argv[i]));
     }
-
-    return 0;
 }
 
-int list_tags(int argc, char **argv)
+static void list_tags(int argc, char **argv)
 {
     int file_id = 0;
 
     if (argc == 1) {
         TAGMAGE_ASSERT(tmdb_get_tags(&print_tag));
-        return 0;
+        return;
     }
 
-    if (sscanf(argv[1], "%i", &file_id) != 1) {
-        warnx("'%s' is not a valid number.", argv[1]);
-        return -1;
-    }
+    if (sscanf(argv[1], "%i", &file_id) != 1)
+        errx(1, "'%s' is not a valid number.", argv[1]);
 
     TAGMAGE_ASSERT(tmdb_get_tags_by_file(file_id, &print_tag));
-    return 0;
 }
 
 int main(int argc, char **argv)
 {
-    int optind = 0, status = 0;
+    int optind = 0;
     char *env = NULL;
     char db_file[PATH_MAX + 1] = {0};
 
@@ -366,7 +339,7 @@ int main(int argc, char **argv)
             goto optbreak;
         case 'h':
             // -h  help
-            print_usage(stdout);
+            print_usage(0);
             return 0;
         case 'f':
             // Set custom database directory
@@ -390,11 +363,11 @@ int main(int argc, char **argv)
             estrlcpy(db_path, env, sizeof(db_path));
         } else if (env = getenv("XDG_DATA_HOME"), env) {
             // Use $XDG_DATA_HOME/tagmage as default
-            snprintf(db_path, PATH_MAX,
+            esnprintf(db_path, PATH_MAX,
                      "%s/tagmage", env);
         } else {
             // Use $HOME/.local/share/tagmage as backup default
-            snprintf(db_path, PATH_MAX,
+            esnprintf(db_path, PATH_MAX,
                      "%s/.local/share/tagmage", getenv("HOME"));
         }
     }
@@ -415,40 +388,39 @@ int main(int argc, char **argv)
 
     // Sub-Commands
     if (argc == 0 || STREQ(argv[0], "help")) {
-        print_usage(stdout);
+        print_usage(0);
     } else if (STREQ(argv[0], "list")) {
-        status = list_files(argc, argv);
+        list_files(argc, argv);
 
     } else if (STREQ(argv[0], "path")) {
-        status = print_path(argc, argv);
+        print_path(argc, argv);
 
     } else if (STREQ(argv[0], "add")) {
-        status = add_file(argc, argv);
+        add_file(argc, argv);
 
     } else if (STREQ(argv[0], "rm")) {
-        status = rm_file(argc, argv);
+        rm_file(argc, argv);
 
     } else if (STREQ(argv[0], "tag")) {
-        status = tag_file(argc, argv);
+        tag_file(argc, argv);
 
     } else if (STREQ(argv[0], "untag")) {
-        status = untag_file(argc, argv);
+        untag_file(argc, argv);
 
     } else if (STREQ(argv[0], "tags")) {
-        status = list_tags(argc, argv);
+        list_tags(argc, argv);
 
     } else if (STREQ(argv[0], "edit")) {
-        status = edit_file(argc, argv);
+        edit_file(argc, argv);
 
     } else {
         // Unknown command
         warnx("Unknown command '%s'\n", argv[0]);
-        print_usage(stderr);
-        status = -1;
+        print_usage(1);
     }
 
     // Close and clean up database before exiting.
     TAGMAGE_ASSERT(tmdb_cleanup());
 
-    return status;
+    return 0;
 }

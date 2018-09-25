@@ -25,9 +25,9 @@ static const PseudoTag pseudotags[] = {
 static int bool_flag(const TMFile *file, const char *flag)
 {
     if (STREQ(flag, "tagged")) {
-        return ERRCHECK(tagmage_has_tags(file->id));
+        return ERRCHECK(tmdb_has_tags(file->id));
     } else if (STREQ(flag, "untagged")) {
-        return !ERRCHECK(tagmage_has_tags(file->id));
+        return !ERRCHECK(tmdb_has_tags(file->id));
     }
 
     return 0;
@@ -36,7 +36,7 @@ static int bool_flag(const TMFile *file, const char *flag)
 // Return true if the file does *not* have the tag.
 static int invert_tag(const TMFile *file, const char *flag)
 {
-    return !tagmage_has_tag(file->id, flag);
+    return !tmdb_has_tag(file->id, flag);
 }
 
 // Looks up the prefix and returns a file filter if found. Otherwise,
@@ -106,7 +106,7 @@ int tagmage_file_has_tags(const TMFile *file, const TagVector *tags)
         else
             // It's a real tag; check if the image has it in the
             // database.
-            passes_filter = tagmage_has_tag(file->id, tags->tags[i]);
+            passes_filter = tmdb_has_tag(file->id, tags->tags[i]);
 
         // Exit early if the current filter doesnt pass.
         if (!passes_filter)
