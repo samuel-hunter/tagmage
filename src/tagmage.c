@@ -53,7 +53,6 @@ static void print_usage(FILE *f)
             "  add [-t TAG1 TAG2 ... +] FILES..\n"
             "  edit FILE TITLE\n"
             "  list [TAGS..]\n"
-            "  untagged\n"
             "  tag FILE [TAGS..]\n"
             "  untag FILE [TAGS..]\n"
             "  tags FILE\n"
@@ -61,13 +60,6 @@ static void print_usage(FILE *f)
             "  rm FILES..\n"
             "\n"
             "Visit `man 1 tagmage` for more details.\n");
-}
-
-static int print_file(const TMFile *file, void *arg)
-{
-    UNUSED(arg);
-    printf("%i %s\n", file->id, file->title);
-    return 0;
 }
 
 static int print_tag(const char *tag)
@@ -98,12 +90,6 @@ static int list_files(int argc, char **argv)
     }
 
     TAGMAGE_ASSERT(tagmage_get_files(&print_file_filtered, &args));
-    return 0;
-}
-
-static int list_untagged()
-{
-    TAGMAGE_ASSERT(tagmage_get_untagged_files(print_file, NULL));
     return 0;
 }
 
@@ -432,8 +418,6 @@ int main(int argc, char **argv)
         print_usage(stdout);
     } else if (STREQ(argv[0], "list")) {
         status = list_files(argc, argv);
-    } else if (STREQ(argv[0], "untagged")) {
-        status = list_untagged();
 
     } else if (STREQ(argv[0], "path")) {
         status = print_path(argc, argv);

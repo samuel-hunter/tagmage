@@ -58,9 +58,7 @@ case $cmd in
 
         # List untagged files if displaying all files.
         if [ "$#" -eq 0 ]; then
-            mkdir ':untagged'
-            cd ':untagged'
-            tagmage untagged | populate &
+            populate-tag ":untagged" &
         fi
         ;;
     tag)

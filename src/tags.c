@@ -4,18 +4,40 @@
 #include "tags.h"
 #include "util.h"
 
-typedef int (*file_filter)(const TMFile*, const char*);
+#define ERRCHECK(EXPR) ((EXPR) > 0 ? 1 : 0)
+
+typedef int (*file_filter)(const TMFile *, const char *);
 
 typedef struct PseudoTag {
     char prefix;
     file_filter filter;
 } PseudoTag;
 
+static int bool_flag(const TMFile *, const char *);
+static int invert_tag(const TMFile *, const char *);
+
 static const PseudoTag pseudotags[] = {
-    // Lovely thing abotu `find_filter` is that you can put in a NULL
-    // function pointer here and it still works as intended.
-    {':', NULL}
+    {':', &bool_flag},
+    {'!', &invert_tag}
 };
+
+// Generic flag with no other arguments.
+static int bool_flag(const TMFile *file, const char *flag)
+{
+    if (STREQ(flag, "tagged")) {
+        return ERRCHECK(tagmage_has_tags(file->id));
+    } else if (STREQ(flag, "untagged")) {
+        return !ERRCHECK(tagmage_has_tags(file->id));
+    }
+
+    return 0;
+}
+
+// Return true if the file does *not* have the tag.
+static int invert_tag(const TMFile *file, const char *flag)
+{
+    return !tagmage_has_tag(file->id, flag);
+}
 
 // Looks up the prefix and returns a file filter if found. Otherwise,
 // returns NULL.
