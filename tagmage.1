@@ -64,12 +64,6 @@ list files that has every provided tag.
 .RE
 
 .PP
-.B untagged
-.RS
-Lists all files without tags.
-.RE
-
-.PP
 .B path
 .RI [ FILES.. ]
 .RS 4
@@ -109,17 +103,45 @@ the program silently succeeds.
 .PP
 .B tags
 .RI [ FILE ]
-.RS
+.RS 4
 Prints a list of newline-delimited tags the file has to standard
 output. If
 .I FILE
 is provided, it prints a list of tags that the file has.
+.RE
 
 .PP
 .B rm
 .I FILES..
 .RS 4
 Removes every file listed from the database.
+.RE
+
+.SH "TAG BEHAVIOR"
+
+Tags assigned by the user can start with any alphanumeric character,
+and must not contain any whitespace anywhere. Pseudo-tags are fake
+tags that aren't created by the user, but rather used by the user to
+communicate more a complex filter. All pseudo-tags start with a
+symbol, but otherise follow the same restrictions as normal tags.
+
+.PP
+.B :tagged
+.RS 4
+Filters in files that have a tag.
+.RE
+
+.PP
+.B :untagged
+.RS 4
+Filters in files that have no tag.
+.RE
+
+.PP
+.BR ! TAG
+.RS 4
+Inverse of TAG; filters in files that does not have TAG.
+.RE
 
 .SH "SEE ALSO"
 
