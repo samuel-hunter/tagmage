@@ -16,7 +16,7 @@
 
 #define TAGMAGE_ASSERT(EXPR) do {               \
         if ((EXPR) < 0) {                       \
-            tagmage_warn();                     \
+            tmdb_warn();                        \
             return -1;                          \
         }} while (0)
 
@@ -89,7 +89,7 @@ static int list_files(int argc, char **argv)
             errx(1, "Invalid tag '%s'.", argv[i]);
     }
 
-    TAGMAGE_ASSERT(tagmage_get_files(&print_file_filtered, &args));
+    TAGMAGE_ASSERT(tmdb_get_files(&print_file_filtered, &args));
     return 0;
 }
 
@@ -109,7 +109,7 @@ static int print_path(int argc, char **argv)
         if (sscanf(argv[i], "%i", &item_id) != 1)
             errx(1, "Invalid number '%s'", argv[i]);
 
-        TAGMAGE_ASSERT(tagmage_get_file(item_id, &img));
+        TAGMAGE_ASSERT(tmdb_get_file(item_id, &img));
 
         printf("%s/%i\n", db_path, img.id);
     }
@@ -190,7 +190,7 @@ static int add_file(int argc, char **argv)
 
         // Create an file in the database early to grab the ID.
         TAGMAGE_ASSERT(file_id =
-                       tagmage_new_file(basename));
+                       tmdb_new_file(basename));
 
         snprintf(file_dest, NAME_MAX, "%s/%i",
                  db_path, file_id);
@@ -201,13 +201,13 @@ static int add_file(int argc, char **argv)
 
             // Attempt to remove file from the database; don't
             // error-check, since we're already failing.
-            tagmage_delete_file(file_id);
+            tmdb_delete_file(file_id);
             warn("%s", file_dest);
             return -1;
         case -2: // Couldn't open the source file.
 
             // Same as above.
-            tagmage_delete_file(file_id);
+            tmdb_delete_file(file_id);
             warn("%s", path);
             return 01;
         }
@@ -217,7 +217,7 @@ static int add_file(int argc, char **argv)
 
         // Add each tag to the new file.
         for(size_t ti = 0; ti < num_tags; ti++) {
-            TAGMAGE_ASSERT(tagmage_add_tag(file_id, tags[ti]));
+            TAGMAGE_ASSERT(tmdb_add_tag(file_id, tags[ti]));
         }
     }
 
@@ -240,7 +240,7 @@ static int rm_file(int argc, char **argv)
         if (sscanf(argv[i], "%i", &id) != 1)
             errx(1, "Unknown number '%s'.", argv[i]);
 
-        TAGMAGE_ASSERT(tagmage_get_file(id, &img));
+        TAGMAGE_ASSERT(tmdb_get_file(id, &img));
 
         snprintf(path, PATH_MAX, "%s/%i", db_path, id);
         int status = remove(path);
@@ -255,7 +255,7 @@ static int rm_file(int argc, char **argv)
             fprintf(stderr, "Removing reference from database anyway...\n");
         }
 
-        TAGMAGE_ASSERT(tagmage_delete_file(id));
+        TAGMAGE_ASSERT(tmdb_delete_file(id));
     }
 
     return 0;
@@ -274,7 +274,7 @@ static int edit_file(int argc, char **argv)
     if (sscanf(argv[1], "%i", &id) != 1)
         errx(1, "'%s' is not a valid number.", argv[1]);
 
-    TAGMAGE_ASSERT(tagmage_edit_title(id, argv[2]));
+    TAGMAGE_ASSERT(tmdb_edit_title(id, argv[2]));
 
     return 0;
 }
@@ -295,7 +295,7 @@ int tag_file(int argc, char **argv)
 
     for (int i = 2; i < argc; i++) {
         if (tagmage_is_valid_tag(argv[i], 1)) {
-            TAGMAGE_ASSERT(tagmage_add_tag(file_id, argv[i]));
+            TAGMAGE_ASSERT(tmdb_add_tag(file_id, argv[i]));
         } else {
             warnx("Invalid tag '%s'.", argv[i]);
         }
@@ -319,7 +319,7 @@ int untag_file(int argc, char **argv)
     }
 
     for (int i = 2; i < argc; i++) {
-        TAGMAGE_ASSERT(tagmage_remove_tag(file_id, argv[i]));
+        TAGMAGE_ASSERT(tmdb_remove_tag(file_id, argv[i]));
     }
 
     return 0;
@@ -330,7 +330,7 @@ int list_tags(int argc, char **argv)
     int file_id = 0;
 
     if (argc == 1) {
-        TAGMAGE_ASSERT(tagmage_get_tags(&print_tag));
+        TAGMAGE_ASSERT(tmdb_get_tags(&print_tag));
         return 0;
     }
 
@@ -339,7 +339,7 @@ int list_tags(int argc, char **argv)
         return -1;
     }
 
-    TAGMAGE_ASSERT(tagmage_get_tags_by_file(file_id, &print_tag));
+    TAGMAGE_ASSERT(tmdb_get_tags_by_file(file_id, &print_tag));
     return 0;
 }
 
@@ -407,7 +407,7 @@ int main(int argc, char **argv)
     estrlcpy(db_file, db_path, sizeof(db_file));
     estrlcat(db_file, "/db.sqlite", sizeof(db_file));
 
-    TAGMAGE_ASSERT(tagmage_setup(db_file));
+    TAGMAGE_ASSERT(tmdb_setup(db_file));
 
     // Shift argc, argv to subcommands
     argc -= optind;
@@ -448,7 +448,7 @@ int main(int argc, char **argv)
     }
 
     // Close and clean up database before exiting.
-    TAGMAGE_ASSERT(tagmage_cleanup());
+    TAGMAGE_ASSERT(tmdb_cleanup());
 
     return status;
 }

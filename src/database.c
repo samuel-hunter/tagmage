@@ -103,12 +103,12 @@ static int cleanup_tags()
 }
 
 
-void tagmage_warn()
+void tmdb_warn()
 {
     warnx("%s", tagmage_err_buf);
 }
 
-int tagmage_setup(const char *db_path)
+int tmdb_setup(const char *db_path)
 {
     sqlite3_stmt *stmt = NULL;
     int rc = 0;
@@ -119,7 +119,7 @@ int tagmage_setup(const char *db_path)
         db_path = ":memory:";
 
     if (db) {
-        if (tagmage_cleanup() < 0)
+        if (tmdb_cleanup() < 0)
             return -1;
     }
 
@@ -158,7 +158,7 @@ int tagmage_setup(const char *db_path)
     return 0;
 }
 
-int tagmage_cleanup()
+int tmdb_cleanup()
 {
     int rc = sqlite3_close(db);
     CHECK_STATUS(rc);
@@ -170,7 +170,7 @@ int tagmage_cleanup()
 }
 
 
-int tagmage_new_file(const char *title)
+int tmdb_new_file(const char *title)
 {
     sqlite3_stmt *stmt = NULL;
     int rc = 0;
@@ -187,7 +187,7 @@ int tagmage_new_file(const char *title)
     return sqlite3_last_insert_rowid(db);
 }
 
-int tagmage_edit_title(int file_id, const char *title)
+int tmdb_edit_title(int file_id, const char *title)
 {
     sqlite3_stmt *stmt = NULL;
 
@@ -209,7 +209,7 @@ int tagmage_edit_title(int file_id, const char *title)
 }
 
 
-int tagmage_add_tag(int file_id, const char *tag_name)
+int tmdb_add_tag(int file_id, const char *tag_name)
 {
     sqlite3_stmt *stmt;
     int rc;
@@ -236,7 +236,7 @@ int tagmage_add_tag(int file_id, const char *tag_name)
     return 0;
 }
 
-int tagmage_remove_tag(int file_id, const char *tag_name)
+int tmdb_remove_tag(int file_id, const char *tag_name)
 {
     sqlite3_stmt *stmt;
     int rc;
@@ -256,7 +256,7 @@ int tagmage_remove_tag(int file_id, const char *tag_name)
     return cleanup_tags();
 }
 
-int tagmage_delete_file(int file_id)
+int tmdb_delete_file(int file_id)
 {
     sqlite3_stmt *stmt = NULL;
     int rc;
@@ -272,7 +272,7 @@ int tagmage_delete_file(int file_id)
 }
 
 
-int tagmage_get_file(int file_id, TMFile *file)
+int tmdb_get_file(int file_id, TMFile *file)
 {
     sqlite3_stmt *stmt = NULL;
     int rc, status = 0;
@@ -304,7 +304,7 @@ int tagmage_get_file(int file_id, TMFile *file)
     return status;
 }
 
-int tagmage_get_files(file_callback callback, void *arg)
+int tmdb_get_files(file_callback callback, void *arg)
 {
     sqlite3_stmt *stmt = NULL;
     int rc;
@@ -318,7 +318,7 @@ int tagmage_get_files(file_callback callback, void *arg)
     return rc;
 }
 
-int tagmage_get_files_by_tag(const char *tag, file_callback callback, void *arg)
+int tmdb_get_files_by_tag(const char *tag, file_callback callback, void *arg)
 {
     sqlite3_stmt *stmt = NULL;
     int status;
@@ -338,7 +338,7 @@ int tagmage_get_files_by_tag(const char *tag, file_callback callback, void *arg)
 }
 
 
-int tagmage_has_tag(int file_id, const char *tag_name) {
+int tmdb_has_tag(int file_id, const char *tag_name) {
     sqlite3_stmt *stmt = NULL;
     int rc;
 
@@ -363,7 +363,7 @@ int tagmage_has_tag(int file_id, const char *tag_name) {
     }
 }
 
-int tagmage_get_tags(tag_callback callback)
+int tmdb_get_tags(tag_callback callback)
 {
     sqlite3_stmt *stmt = NULL;
     int status;
@@ -376,7 +376,7 @@ int tagmage_get_tags(tag_callback callback)
     return status;
 }
 
-int tagmage_get_tags_by_file(int file_id, tag_callback callback)
+int tmdb_get_tags_by_file(int file_id, tag_callback callback)
 {
     sqlite3_stmt *stmt = NULL;
     int status;
@@ -393,7 +393,7 @@ int tagmage_get_tags_by_file(int file_id, tag_callback callback)
     return status;
 }
 
-int tagmage_has_tags(int file_id)
+int tmdb_has_tags(int file_id)
 {
     sqlite3_stmt *stmt = NULL;
     int rc;
