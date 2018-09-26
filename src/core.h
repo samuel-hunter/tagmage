@@ -8,6 +8,8 @@
 #define TITLE_MAX_STR "4096"
 #define TAG_MAX_STR "4096"
 
+#define BUFF_MAX 4096
+
 typedef struct TMFile {
     int id;
     unsigned char title[TITLE_MAX + 1];

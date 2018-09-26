@@ -23,6 +23,11 @@ typedef int (*tag_callback)(const char*);
 void tmdb_error();
 
 /**
+ * tmdb_get_error() - Return a cstring containing the latest error.
+ */
+const char *tmdb_get_error();
+
+/**
  * tmdb_setup() - Set up and load the database.
  *
  * db_path - the path to the tagmage database directory.

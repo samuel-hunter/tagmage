@@ -21,8 +21,6 @@
     sqlite3_bind_text \
     (STMT, sqlite3_bind_parameter_index(STMT, NAME), VAL, -1, NULL)
 
-#define BUFF_MAX 4096
-
 static const char *db_setup_queries[] =
     {"CREATE TABLE image ("
      "  id INTEGER PRIMARY KEY,"
@@ -42,11 +40,11 @@ static const char *db_setup_queries[] =
      0};
 
 static sqlite3 *db = NULL;
-static char tagmage_err_buf[BUFF_MAX] = {0};
+static char err_buf[BUFF_MAX] = {0};
 
 static void seterr()
 {
-    snprintf(tagmage_err_buf, BUFF_MAX,
+    snprintf(err_buf, BUFF_MAX,
                "(%i) %s", sqlite3_errcode(db), sqlite3_errmsg(db));
 }
 
@@ -105,7 +103,12 @@ static int cleanup_tags()
 
 void tmdb_error()
 {
-    errx(1, "%s", tagmage_err_buf);
+    errx(1, "%s", err_buf);
+}
+
+const char *tmdb_get_error()
+{
+    return err_buf;
 }
 
 int tmdb_setup(const char *db_path)
@@ -284,7 +287,7 @@ int tmdb_get_file(int file_id, TMFile *file)
 
     switch (rc) {
     case SQLITE_DONE:
-        strncpy(tagmage_err_buf, "File doesn't exist.", sizeof(tagmage_err_buf));
+        strncpy(err_buf, "File doesn't exist.", sizeof(err_buf));
         status = -1;
         break;
     case SQLITE_ROW:

@@ -11,7 +11,6 @@
 #include "tags.h"
 
 #define APP_NAME "tagmage"
-#define BUFF_MAX 4096
 
 #define TAGMAGE_ASSERT(EXPR) \
     if ((EXPR) < 0)          \
@@ -88,8 +87,11 @@ static int print_tag(const char *tag)
 static int print_file_filtered(const TMFile *file, void *vecptr)
 {
     TagVector *tagvec = vecptr;
+    int has_tags = tmtag_file_has_tags(file, tagvec);
 
-    if (tagmage_file_has_tags(file, tagvec))
+    if (has_tags < 0)
+        errx(1, "%s", tmtag_get_err());
+    else if (has_tags)
         printf("%i %s\n", file->id, file->title);
 
     return 0;
@@ -102,7 +104,7 @@ static void list_files(int argc, char **argv)
 
     // Sanity check on all the tags before starting.
     for (int i = 1; i < argc; i++) {
-        if (!tagmage_is_valid_tag(argv[i], 0))
+        if (!tmtag_is_valid(argv[i], 0))
             errx(1, "Invalid tag '%s'.", argv[i]);
     }
 
@@ -158,7 +160,7 @@ static void add_file(int argc, char **argv)
             INCOPT();
             while (!STREQ(argv[optind], "+")) {
                 // Double-check the tag is valid.
-                if (!tagmage_is_valid_tag(argv[optind], 1)) {
+                if (!tmtag_is_valid(argv[optind], 1)) {
                     errx(1, "Invalid tag '%s'.",
                          argv[optind]);
                 }
@@ -284,7 +286,7 @@ static void tag_file(int argc, char **argv)
     file_id = estrtoid(argv[1]);
 
     for (int i = 2; i < argc; i++) {
-        if (tagmage_is_valid_tag(argv[i], 1)) {
+        if (tmtag_is_valid(argv[i], 1)) {
             TAGMAGE_ASSERT(tmdb_add_tag(file_id, argv[i]));
         } else {
             errx(1, "Invalid tag '%s'.", argv[i]);
