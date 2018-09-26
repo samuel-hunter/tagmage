@@ -21,7 +21,7 @@
     sqlite3_bind_text \
     (STMT, sqlite3_bind_parameter_index(STMT, NAME), VAL, -1, NULL)
 
-#define BUFFER_MAX 4096
+#define BUFF_MAX 4096
 
 static const char *db_setup_queries[] =
     {"CREATE TABLE image ("
@@ -42,11 +42,11 @@ static const char *db_setup_queries[] =
      0};
 
 static sqlite3 *db = NULL;
-static char tagmage_err_buf[BUFFER_MAX + 1] = {0};
+static char tagmage_err_buf[BUFF_MAX] = {0};
 
 static void seterr()
 {
-    snprintf(tagmage_err_buf, BUFFER_MAX,
+    snprintf(tagmage_err_buf, BUFF_MAX,
                "(%i) %s", sqlite3_errcode(db), sqlite3_errmsg(db));
 }
 
@@ -284,7 +284,7 @@ int tmdb_get_file(int file_id, TMFile *file)
 
     switch (rc) {
     case SQLITE_DONE:
-        strncpy(tagmage_err_buf, "File doesn't exist.", BUFFER_MAX);
+        strncpy(tagmage_err_buf, "File doesn't exist.", sizeof(tagmage_err_buf));
         status = -1;
         break;
     case SQLITE_ROW:
@@ -316,25 +316,6 @@ int tmdb_get_files(file_callback callback, void *arg)
     sqlite3_finalize(stmt);
 
     return rc;
-}
-
-int tmdb_get_files_by_tag(const char *tag, file_callback callback, void *arg)
-{
-    sqlite3_stmt *stmt = NULL;
-    int status;
-
-    PREPARE(stmt,
-            "SELECT id, title FROM image"
-            " WHERE id IN (SELECT image FROM image_tag"
-            "   WHERE tag = (SELECT id FROM tag"
-            "                 WHERE name=:tag))");
-
-    BIND_TEXT(stmt, ":tag", tag);
-
-    status = iter_files(stmt, callback, arg);
-    sqlite3_finalize(stmt);
-
-    return status;
 }
 
 

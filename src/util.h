@@ -16,10 +16,14 @@
 #define UNUSED(X) ((void)(X))
 
 
-// Create a directories and all its parents
+/**
+ * mkpath() - Create a directories and all its parents.
+ */
 int mkpath(const char *path, __mode_t mode);
 
-// Copy a file from one location to the other
+/**
+ * cp() - Copy a file from one location to the other
+ */
 int cp(const char *dst, const char *src);
 
 #endif /* UTIL_H */
