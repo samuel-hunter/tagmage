@@ -17,12 +17,6 @@ typedef int (*tag_callback)(const char*);
  */
 
 /**
- * tmdb_error() - Display a formatted error message in stderr and exit the
- * program.
- */
-void tmdb_error();
-
-/**
  * tmdb_get_error() - Return a cstring containing the latest error.
  */
 const char *tmdb_get_error();

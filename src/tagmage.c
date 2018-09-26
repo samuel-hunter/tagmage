@@ -14,7 +14,7 @@
 
 #define TAGMAGE_ASSERT(EXPR) \
     if ((EXPR) < 0)          \
-        tmdb_error();
+        errx(1, "%s", tmdb_get_error());
 
 #define INCOPT()                               \
     if (++optind >= argc)                      \

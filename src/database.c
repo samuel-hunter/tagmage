@@ -101,11 +101,6 @@ static int cleanup_tags()
 }
 
 
-void tmdb_error()
-{
-    errx(1, "%s", err_buf);
-}
-
 const char *tmdb_get_error()
 {
     return err_buf;
