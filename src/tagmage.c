@@ -137,8 +137,7 @@ static void add_file(int argc, char **argv)
     char *path = NULL, *basename = NULL;
     char file_dest[NAME_MAX + 1] = {'\0'};
     int file_id = 0;
-    char *tags[BUFF_MAX] = {NULL};
-    size_t num_tags = 0;
+    char **tags = NULL;
     int optind;
 
     for (optind = 1; optind < argc; optind++) {
@@ -158,19 +157,20 @@ static void add_file(int argc, char **argv)
         case 't':
             // -t [tag1] [tag2] ... +   supplementary tags
             INCOPT();
+
+            // The '-t' flag can only be used once:
+            if (tags != NULL)
+                errx(1, "The -t flag can only be used once.");
+
+            // Point to first tag in list.
+            tags = argv + optind;
+
+            // Verify that every tag is valid.
             while (!STREQ(argv[optind], "+")) {
-                // Double-check the tag is valid.
                 if (!tmtag_is_valid(argv[optind], 1)) {
+                    // The tag is invalid.
                     errx(1, "Invalid tag '%s'.",
                          argv[optind]);
-                }
-
-                tags[num_tags] = argv[optind];
-
-                // Double-check there isn't too many tags.
-                if (++num_tags == sizeof(tags)) {
-                    errx(1, "Too many tags after '%s'.",
-                         argv[optind-1]);
                 }
                 INCOPT();
             }
@@ -224,7 +224,7 @@ static void add_file(int argc, char **argv)
         printf("%i\n", file_id);
 
         // Add each tag to the new file.
-        for(size_t ti = 0; ti < num_tags; ti++) {
+        for(size_t ti = 0; !STREQ(tags[ti], "+"); ti++) {
             TAGMAGE_ASSERT(tmdb_add_tag(file_id, tags[ti]));
         }
     }
