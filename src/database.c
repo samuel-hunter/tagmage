@@ -44,7 +44,7 @@ static char err_buf[BUFF_MAX] = {0};
 
 static void seterr()
 {
-    snprintf(err_buf, BUFF_MAX,
+    snprintf(err_buf, sizeof(err_buf),
                "(%i) %s", sqlite3_errcode(db), sqlite3_errmsg(db));
 }
 
