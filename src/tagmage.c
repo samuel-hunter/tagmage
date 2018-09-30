@@ -168,7 +168,7 @@ static void add_file(int argc, char **argv)
                 tags[num_tags] = argv[optind];
 
                 // Double-check there isn't too many tags.
-                if (++num_tags == BUFF_MAX) {
+                if (++num_tags == sizeof(tags)) {
                     errx(1, "Too many tags after '%s'.",
                          argv[optind-1]);
                 }
@@ -202,7 +202,7 @@ static void add_file(int argc, char **argv)
         TAGMAGE_ASSERT(file_id =
                        tmdb_new_file(basename));
 
-        esnprintf(file_dest, NAME_MAX, "%s/%i",
+        esnprintf(file_dest, sizeof(file_dest), "%s/%i",
                   db_path, file_id);
 
         // Copy file and handle file errors.
@@ -245,7 +245,7 @@ static void rm_file(int argc, char **argv)
         id = estrtoid(argv[i]);
         TAGMAGE_ASSERT(tmdb_get_file(id, &img));
 
-        esnprintf(path, PATH_MAX, "%s/%i", db_path, id);
+        esnprintf(path, sizeof(path), "%s/%i", db_path, id);
         int status = remove(path);
         if (status != 0) {
             // I/O Error
@@ -369,11 +369,11 @@ int main(int argc, char **argv)
             estrlcpy(db_path, env, sizeof(db_path));
         } else if (env = getenv("XDG_DATA_HOME"), env) {
             // Use $XDG_DATA_HOME/tagmage as default
-            esnprintf(db_path, PATH_MAX,
+            esnprintf(db_path, sizeof(db_path),
                      "%s/tagmage", env);
         } else {
             // Use $HOME/.local/share/tagmage as backup default
-            esnprintf(db_path, PATH_MAX,
+            esnprintf(db_path, sizeof(db_path),
                      "%s/.local/share/tagmage", getenv("HOME"));
         }
     }

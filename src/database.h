@@ -96,4 +96,4 @@ int tmdb_get_tags_by_file(int file_id, tag_callback callback);
  */
 int tmdb_has_tags(int file_id);
 
-#endif /* BACKEND_H */
+#endif // BACKEND_H

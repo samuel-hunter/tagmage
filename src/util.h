@@ -26,4 +26,4 @@ int mkpath(const char *path, __mode_t mode);
  */
 int cp(const char *dst, const char *src);
 
-#endif /* UTIL_H */
+#endif // UTIL_H

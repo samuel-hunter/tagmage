@@ -15,4 +15,4 @@ typedef struct TMFile {
     unsigned char title[TITLE_MAX + 1];
 } TMFile;
 
-#endif /* CORE_H */
+#endif // CORE_H

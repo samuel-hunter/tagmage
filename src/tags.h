@@ -27,4 +27,4 @@ int tmtag_is_valid(const char *tag, int must_be_real);
  */
 int tmtag_file_has_tags(const TMFile *file, const TagVector *filters);
 
-#endif /* TAGS_H */
+#endif // TAGS_H
