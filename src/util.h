@@ -4,6 +4,7 @@
 #include <stdlib.h> // mode_t
 
 #define MIN(X,Y) ((X)<(Y) ? (X) : (Y))
+#define LEN(A) (sizeof(A)/sizeof((A)[0]))
 
 // Limits
 #define PATH_MAX 4096

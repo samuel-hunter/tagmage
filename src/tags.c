@@ -66,7 +66,7 @@ static int invert_tag(const TMFile *file, const char *flag)
 // returns NULL.
 static file_filter find_filter(char c)
 {
-    for (size_t i = 0; i < sizeof(pseudotags); i++) {
+    for (size_t i = 0; i < LEN(pseudotags); i++) {
         if (pseudotags[i].prefix == c)
             return pseudotags[i].filter;
     }
@@ -122,15 +122,16 @@ int tmtag_file_has_tags(const TMFile *file, const TagVector *tags)
         filter = find_filter(tags->tags[i][0]);
 
 
-        if (filter)
+        if (filter) {
             // Go through the special filter to check if the image.
             // Add +1 to the tag name so that it doesn't catch the
             // prefix.
             passes_filter = filter(file, tags->tags[i]+1);
-        else
+        } else {
             // It's a real tag; check if the image has it in the
             // database.
             passes_filter = check_tmdb(tmdb_has_tag(file->id, tags->tags[i]));
+        }
 
         // Exit early if the current filter doesnt pass or errs.
         if (passes_filter <= 0)
