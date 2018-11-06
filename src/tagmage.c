@@ -9,8 +9,7 @@
 #include "database.h"
 #include "util.h"
 #include "tags.h"
-
-#define APP_NAME "tagmage"
+#include "libtagmage.h"
 
 #define TAGMAGE_ASSERT(EXPR) \
     if ((EXPR) < 0)          \
@@ -20,31 +19,6 @@
     if (++optind >= argc)                      \
         errx(1, "Missing operand after '%s'.", \
              argv[optind-1])
-
-
-static char db_path[PATH_MAX+1] = {0};
-
-
-static void estrlcpy(char *dst, const char *src, size_t size)
-{
-    if (strlcpy(dst, src, size) > size)
-        errx(1, "strlcpy: string truncated: %s", src);
-}
-
-static void estrlcat(char *dst, const char *src, size_t size)
-{
-    if (strlcat(dst, src, size) > size)
-        errx(1, "strlcat: string truncated: %s", src);
-}
-
-static void esnprintf(char *str, size_t size, const char *format, ...)
-{
-    va_list ap;
-    va_start(ap, format);
-
-    if ((size_t)vsnprintf(str, size, format, ap) >= size)
-        errx(1, "snprintf: string truncated: %s", str);
-}
 
 static int estrtoid(const char *str)
 {
@@ -115,28 +89,29 @@ static void print_path(int argc, char **argv)
 {
     TMFile img;
     int item_id = 0;
+    char path_buf[PATH_MAX + 1] = {0};
 
     if (argc == 1) {
         // print Database path if no file id provided
-        printf("%s\n", db_path);
+        printf("%s\n", tm_path());
         return;
     }
 
     // Each subsequent argument is an file id
     for (int i = 1; i < argc; i++) {
         item_id = estrtoid(argv[i]);
-
         TAGMAGE_ASSERT(tmdb_get_file(item_id, &img));
 
-        printf("%s/%i\n", db_path, img.id);
+        if (tm_file_path(&img, path_buf, sizeof(path_buf)) >= sizeof(path_buf)) {
+            errno = ENOBUFS;
+            err(1, "tm_file_path: %s", tm_get_error());
+        }
+        puts(path_buf);
     }
 }
 
 static void add_file(int argc, char **argv)
 {
-    char *path = NULL, *basename = NULL;
-    char file_dest[NAME_MAX + 1] = {'\0'};
-    int file_id = 0;
     char **tags = NULL;
     int optind;
 
@@ -186,79 +161,37 @@ static void add_file(int argc, char **argv)
     if (optind == argc)
         errx(1, "Missing file operand.");
 
-
     for (int i = optind; i < argc; i++) {
-        // Add file
-        path = argv[i];
-
-        // Search for the basename.
-        basename = strrchr(path, '/');
-        if (basename == NULL)
-            basename = path;
-        else
-            basename++;
-
-        // Create an file in the database early to grab the ID.
-        TAGMAGE_ASSERT(file_id =
-                       tmdb_new_file(basename));
-
-        esnprintf(file_dest, sizeof(file_dest), "%s/%i",
-                  db_path, file_id);
-
-        // Copy file and handle file errors.
-        switch (cp(file_dest, path)) {
-        case -1: // Couldn't open the destination file.
-
-            // Attempt to remove file from the database; don't
-            // error-check, since we're already failing.
-            tmdb_delete_file(file_id);
-            err(1, "%s", file_dest);
-        case -2: // Couldn't open the source file.
-
-            // Same as above.
-            tmdb_delete_file(file_id);
-            err(1, "%s", path);
-        }
+        // Add file to database.
+        TMFile file;
+        if (tm_add_file(argv[i], &file) < 0)
+            err(1, "tm_add_file: %s", tm_get_error());
 
         // Print ID of new file.
-        printf("%i\n", file_id);
+        printf("%i\n", file.id);
 
         // Add each tag to the new file.
-        for(size_t ti = 0; !STREQ(tags[ti], "+"); ti++) {
-            TAGMAGE_ASSERT(tmdb_add_tag(file_id, tags[ti]));
+        if (tags) {
+            for(size_t ti = 0; !STREQ(tags[ti], "+"); ti++) {
+                TAGMAGE_ASSERT(tmdb_add_tag(file.id, tags[ti]));
+            }
         }
     }
 }
 
 static void rm_file(int argc, char **argv)
 {
-    int id = 0;
-    TMFile img;
-    char path[PATH_MAX + 1];
-
     if (argc == 1) {
         warnx("Missing file operand.\n");
         print_usage(1);
     }
 
     for (int i = 1; i < argc; i++) {
-        id = estrtoid(argv[i]);
-        TAGMAGE_ASSERT(tmdb_get_file(id, &img));
+        TMFile file;
+        file.id = estrtoid(argv[i]);
 
-        esnprintf(path, sizeof(path), "%s/%i", db_path, id);
-        int status = remove(path);
-        if (status != 0) {
-            // I/O Error
-            warn("%s", path);
-
-            if (status != ENOENT)
-                return;
-
-            // File doesn't exist; we can recover
-            fprintf(stderr, "Removing reference from database anyway...\n");
-        }
-
-        TAGMAGE_ASSERT(tmdb_delete_file(id));
+        if (tm_rm_file(&file) < 0)
+            err(1, "tm_rm_file: %s", tm_get_error());
     }
 }
 
@@ -325,8 +258,7 @@ static void list_tags(int argc, char **argv)
 int main(int argc, char **argv)
 {
     int optind = 0;
-    char *env = NULL;
-    char db_file[PATH_MAX + 1] = {0};
+    char *db_path = NULL;
 
     for (optind = 1; optind < argc; optind++) {
         // Non-option reached
@@ -350,7 +282,7 @@ int main(int argc, char **argv)
         case 'f':
             // Set custom database directory
             INCOPT(); // increase optind
-            estrlcpy(db_path, argv[optind], sizeof(db_path));
+            db_path = argv[optind];
             break;
         default:
             errx(1, "Unexpected argument '%s'.",
@@ -361,32 +293,8 @@ int main(int argc, char **argv)
     }
  optbreak:
 
-
-    // Set-up db_path if it's not yet initialized
-    if (db_path[0] == '\0') {
-        if (env = getenv("TAGMAGE_HOME"), env) {
-            // Use $TAGMAGE_SAVE as first default
-            estrlcpy(db_path, env, sizeof(db_path));
-        } else if (env = getenv("XDG_DATA_HOME"), env) {
-            // Use $XDG_DATA_HOME/tagmage as default
-            esnprintf(db_path, sizeof(db_path),
-                     "%s/tagmage", env);
-        } else {
-            // Use $HOME/.local/share/tagmage as backup default
-            esnprintf(db_path, sizeof(db_path),
-                     "%s/.local/share/tagmage", getenv("HOME"));
-        }
-    }
-
-    // Create path to database if it's not set up already
-    if (mkpath(db_path, 0700) < 0)
-        err(1, "db_path");
-
-    // Set up backend database
-    estrlcpy(db_file, db_path, sizeof(db_file));
-    estrlcat(db_file, "/db.sqlite", sizeof(db_file));
-
-    TAGMAGE_ASSERT(tmdb_setup(db_file));
+    if (tm_init(db_path) < 0)
+        err(1, "tm_init: %s", tm_get_error());
 
     // Shift argc, argv to subcommands
     argc -= optind;

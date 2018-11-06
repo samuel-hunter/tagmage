@@ -4,7 +4,14 @@ PREFIX ?= /usr/local
 MANPREFIX := $(PREFIX)/share/man
 
 CFLAGS := -Werror -Wall -Wextra -Wpedantic -std=c99 -O2 `pkg-config --cflags libbsd sqlite3`
+CFLAGS += -g -O0
 LDFLAGS := `pkg-config --libs libbsd sqlite3`
+
+HEADERS := $(shell find src -name *.h)
+COMMON_SRC := src/database.c src/tags.c src/util.c src/libtagmage.c
+COMMON_OBJ := $(patsubst src/%.c,build/%.o,$(COMMON_SRC))
+CLI_SRC := src/tagmage.c
+CLI_OBJ := $(patsubst src/%.c,build/%.o,$(CLI_SRC)) $(COMMON_OBJ)
 
 SRC := $(shell find src -name *.c)
 HEADERS := $(shell find src -name *.h)
@@ -12,11 +19,10 @@ OBJ := $(patsubst src/%.c,build/%.o,$(SRC))
 
 DISTFILES := src tad tagmage.1 tad.1 Makefile LICENSE README.md
 
-
 all: options tagmage
 
 options:
-	@echo tagmage build options:
+	@echo build options:
 	@echo "CFLAGS = $(CFLAGS)"
 	@echo "LDFLAGS = $(LDFLAGS)"
 	@echo "CC = $(CC)"
@@ -28,7 +34,7 @@ build/%.o: src/%.c $(HEADERS)
 	@mkdir -p build
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-tagmage: $(OBJ)
+tagmage: $(CLI_OBJ)
 	$(CC) $(LDFLAGS) -o $@ $^
 
 install: tagmage
