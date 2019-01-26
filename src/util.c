@@ -55,13 +55,13 @@ int cp(const char *dst, const char *src)
 
         while (nread > 0) {
             nwritten = fwrite(buf, 1, MIN(sizeof buf, nread), fd_dst);
-            if (nwritten >= 0) {
-                nread -= nwritten;
-                out_ptr += nwritten;
-            } else if (ferror(fd_dst)) {
+            if (ferror(fd_dst)) {
                 errcode = ferror(fd_dst);
                 goto cleanup;
             }
+
+            nread -= nwritten;
+            out_ptr += nwritten;
         }
     }
 
