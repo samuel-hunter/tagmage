@@ -21,18 +21,18 @@
 
 static int estrtoid(const char *str)
 {
-	long id_l = 0;
-	int id = 0;
+	long id = 0;
 
-	id_l = (int) strtol(str, NULL, 0);
+	errno = 0;
+	id = (int) strtol(str, NULL, 0);
 	if (errno) {
 		err(1, "Failed to convert to id: '%s'", str);
-	} else if (id_l < 1 || id_l > INT_MAX) {
+	} else if (id < 1 || id > INT_MAX) {
 		errno = ERANGE;
 		err(1, "Failed to convert to id: '%s'", str);
 	}
 
-	return id;
+	return (int) id;
 }
 
 static void print_usage(int status)
