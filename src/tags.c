@@ -1,4 +1,3 @@
-#include <bsd/string.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
@@ -29,7 +28,7 @@ static char err_buf[BUFF_MAX] = {0};
 static int check_tmdb(int status)
 {
     if (status < 0)
-        strlcpy(err_buf, tmdb_get_error(), sizeof(err_buf));
+        strncpy(err_buf, tmdb_get_error(), sizeof(err_buf)-1);
     return status;
 }
 

@@ -2,8 +2,8 @@
 #include <errno.h>
 #include <stdio.h>
 #include <limits.h>
-#include <bsd/string.h>
-#include <bsd/inttypes.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "core.h"
 #include "database.h"
@@ -22,11 +22,16 @@
 
 static int estrtoid(const char *str)
 {
-    int rstatus = 0, id = 0;
+    long id_l = 0;
+    int id = 0;
 
-    id = (int) strtoi(str, NULL, 0, 1, INT_MAX, &rstatus);
-    if (rstatus)
-        errx(1, "Failed to convert to id: '%s'.", str);
+    id_l = (int) strtol(str, NULL, 0);
+    if (errno) {
+        err(1, "Failed to convert to id: '%s'", str);
+    } else if (id_l < 1 || id_l > INT_MAX) {
+        errno = ERANGE;
+        err(1, "Failed to convert to id: '%s'", str);
+    }
 
     return id;
 }

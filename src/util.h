@@ -1,7 +1,7 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include <stdlib.h> // mode_t
+#include <sys/types.h>
 
 #define MIN(X,Y) ((X)<(Y) ? (X) : (Y))
 #define LEN(A) (sizeof(A)/sizeof((A)[0]))
@@ -20,7 +20,7 @@
 /**
  * mkpath() - Create a directories and all its parents.
  */
-int mkpath(const char *path, __mode_t mode);
+int mkpath(const char *path, mode_t mode);
 
 /**
  * cp() - Copy a file from one location to the other

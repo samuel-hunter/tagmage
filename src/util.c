@@ -2,13 +2,14 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+
 #include <sys/stat.h>
 
 #include "limits.h"
 #include "util.h"
 
 
-int mkpath(const char *path, __mode_t mode)
+int mkpath(const char *path, mode_t mode)
 {
     char curpath[PATH_MAX+1];
     int len = strlen(path);

@@ -1,8 +1,8 @@
-#include <bsd/string.h> // strlcpy
 #include <errno.h> // errno, ENOBUFS
 #include <stdio.h> // snprintf
 #include <stdlib.h> // getenv
 #include <limits.h> // PATH_MAX
+#include <string.h>
 
 #include "database.h"
 #include "util.h" // mkpath
@@ -18,9 +18,9 @@ int tm_init(const char *path)
     size_t len = 0;
 
     if (path) {
-        len = strlcpy(tagmage_path, path, sizeof(tagmage_path));
+        len = strncpy(tagmage_path, path, sizeof(tagmage_path)-1) - tagmage_path;
     } else if (env = getenv("TAGMAGE_HOME"), env) {
-        len = strlcpy(tagmage_path, env, sizeof(tagmage_path));
+        len = strncpy(tagmage_path, env, sizeof(tagmage_path)-1) - tagmage_path;
     } else if (env = getenv("XDG_DATA_HOME"), env) {
         len = snprintf(tagmage_path, sizeof(tagmage_path),
                        "%s/tagmage", env);
@@ -91,7 +91,7 @@ int tm_add_file(const char *path, TMFile *file)
     }
 
     // Copy the basename to the image struct.
-    len = strlcpy((char*) file->title, basename, sizeof(file->title));
+    len = strncpy((char*) file->title, basename, sizeof(file->title)-1) - (char*)file->title;
     if (len >= sizeof(file->title)) {
         errno = ENOBUFS;
         return -1;

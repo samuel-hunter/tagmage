@@ -3,9 +3,9 @@ VERSION := 0.2.1
 PREFIX ?= /usr/local
 MANPREFIX := $(PREFIX)/share/man
 
-CFLAGS := -Werror -Wall -Wextra -Wpedantic -std=c99 -O2 `pkg-config --cflags libbsd sqlite3`
+CFLAGS := -Werror -Wall -Wextra -Wpedantic -std=c99 -O2 `pkg-config --cflags sqlite3`
 CFLAGS += -g -O0
-LDFLAGS := `pkg-config --libs libbsd sqlite3`
+LDFLAGS := `pkg-config --libs sqlite3`
 
 HEADERS := $(shell find src -name *.h)
 COMMON_SRC := src/database.c src/tags.c src/util.c src/libtagmage.c
@@ -19,7 +19,7 @@ OBJ := $(patsubst src/%.c,build/%.o,$(SRC))
 
 DISTFILES := src tad tagmage.1 tad.1 Makefile LICENSE README.md
 
-all: options tagmage
+default all: options tagmage
 
 options:
 	@echo build options:
@@ -35,7 +35,7 @@ build/%.o: src/%.c $(HEADERS)
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 tagmage: $(CLI_OBJ)
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(CC) -o $@ $^ $(LDFLAGS)
 
 install: tagmage
 	install -m 755 -d $(MANPREFIX)/man1 $(PREFIX)/bin
