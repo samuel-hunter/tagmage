@@ -4,8 +4,8 @@
 #include "core.h"
 
 typedef struct TagVector {
-    int size;
-    char **tags;
+	int size;
+	char **tags;
 } TagVector;
 
 /**

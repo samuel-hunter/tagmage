@@ -11,8 +11,8 @@
 #define BUFF_MAX 4096
 
 typedef struct TMFile {
-    int id;
-    unsigned char title[TITLE_MAX + 1];
+	int id;
+	unsigned char title[TITLE_MAX + 1];
 } TMFile;
 
 #endif // CORE_H
